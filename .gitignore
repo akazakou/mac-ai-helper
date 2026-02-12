@@ -1,0 +1,33 @@
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.playground/
+
+# Build
+.build/
+build/
+DerivedData/
+*.o
+*.dSYM
+*.ipa
+*.app
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+
+# macOS
+.DS_Store
+*.swp
+*~
+._*
+
+# IDE
+.idea/
+*.code-workspace
+
+# Misc
+*.log
+*.tmp

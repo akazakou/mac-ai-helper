@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Mac AI Helper</string>
+    <key>CFBundleIdentifier</key>
+    <string>pro.kantora.MacAIHelper</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>MacAIHelper</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <!-- No Dock icon — menu bar only -->
+    <key>LSUIElement</key>
+    <true/>
+    <!-- Privacy descriptions -->
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Mac AI Helper needs screen recording permission to capture screenshots for AI analysis.</string>
+    <key>NSAccessibilityUsageDescription</key>
+    <string>Mac AI Helper needs accessibility permission to detect global keyboard shortcuts.</string>
+</dict>
+</plist>
