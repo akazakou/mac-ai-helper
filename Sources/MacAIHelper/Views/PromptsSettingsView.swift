@@ -12,6 +12,9 @@ struct PromptsSettingsView: View {
     /// The prompt currently being edited (nil for new prompt)
     @State private var editingPrompt: Prompt?
 
+    /// The prompt pending deletion (triggers confirmation alert)
+    @State private var promptToDelete: Prompt?
+
     /// Fields for the prompt editor
     @State private var editorTitle = ""
     @State private var editorTemplate = ""
@@ -51,6 +54,14 @@ struct PromptsSettingsView: View {
                             Image(systemName: "pencil")
                         }
                         .buttonStyle(.borderless)
+
+                        Button {
+                            promptToDelete = prompt
+                        } label: {
+                            Image(systemName: "xmark.circle")
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.borderless)
                     }
                     .padding(.vertical, 4)
                 }
@@ -73,6 +84,24 @@ struct PromptsSettingsView: View {
         .padding()
         .sheet(isPresented: $showingEditor) {
             promptEditorSheet
+        }
+        .alert(
+            "Delete Prompt",
+            isPresented: Binding(
+                get: { promptToDelete != nil },
+                set: { if !$0 { promptToDelete = nil } }
+            )
+        ) {
+            Button("Cancel", role: .cancel) {
+                promptToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                confirmDelete()
+            }
+        } message: {
+            if let prompt = promptToDelete {
+                Text("Are you sure you want to delete \"\(prompt.title)\"?")
+            }
         }
     }
 
@@ -135,6 +164,16 @@ struct PromptsSettingsView: View {
         editorTemplate = prompt.template
         editorIcon = prompt.icon
         showingEditor = true
+    }
+
+    private func confirmDelete() {
+        guard let prompt = promptToDelete,
+              let index = viewModel.settings.prompts.firstIndex(where: { $0.id == prompt.id }) else {
+            promptToDelete = nil
+            return
+        }
+        viewModel.deletePrompt(at: IndexSet(integer: index))
+        promptToDelete = nil
     }
 
     private func savePrompt() {
