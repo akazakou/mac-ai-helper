@@ -65,6 +65,9 @@ final class SettingsViewModel {
         try KeychainService.saveKey(key, for: entry.id)
         appState.settings.apiKeyEntries.append(entry)
         appState.saveSettings()
+
+        // Refresh available models to include the new provider
+        Task { await appState.loadModels() }
     }
 
     /// Deletes an API key entry and removes it from the Keychain.
@@ -74,6 +77,9 @@ final class SettingsViewModel {
         try? KeychainService.deleteKey(for: entry.id)
         appState.settings.apiKeyEntries.removeAll { $0.id == entry.id }
         appState.saveSettings()
+
+        // Refresh available models to remove the deleted provider's models
+        Task { await appState.loadModels() }
     }
 
     // MARK: - Model Management
