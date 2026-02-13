@@ -24,9 +24,10 @@ struct MacAIHelperApp: App {
         }
     }
 
-    /// Loads the custom SVG icon from the app bundle and prepares it for menu bar display.
+    /// Loads the monochrome template icon from the app bundle for menu bar display.
+    /// The image is marked as a template so macOS auto-tints it for dark/light mode.
     private static func loadMenuBarIcon() -> NSImage? {
-        guard let url = Bundle.module.url(forResource: "icon", withExtension: "svg"),
+        guard let url = Bundle.module.url(forResource: "menubar-icon", withExtension: "png"),
               let image = NSImage(contentsOf: url) else {
             return nil
         }
@@ -34,6 +35,9 @@ struct MacAIHelperApp: App {
         // Menu bar icons should be ~18pt (36px @2x)
         let menuBarSize = NSSize(width: 18, height: 18)
         image.size = menuBarSize
+
+        // Mark as template so the system handles dark/light appearance
+        image.isTemplate = true
 
         return image
     }

@@ -9,7 +9,7 @@ let package = Package(
             name: "MacAIHelper",
             path: "Sources/MacAIHelper",
             resources: [
-                .copy("Resources/icon.svg"),
+                .copy("Resources/menubar-icon.png"),
             ]
         ),
         .testTarget(
