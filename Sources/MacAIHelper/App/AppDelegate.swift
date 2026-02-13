@@ -143,6 +143,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 appState.capturedImage = imageData
                 appState.capturedText = nil
                 showPromptPopup()
+            } catch AppError.screenCaptureCancelled {
+                // User pressed ESC — silently ignore
             } catch {
                 print("⚠️ Screenshot capture failed: \(error)")
                 appState.lastError = error.localizedDescription

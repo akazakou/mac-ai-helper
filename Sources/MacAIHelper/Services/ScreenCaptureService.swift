@@ -143,6 +143,9 @@ private final class RegionSelectorWindow: NSWindow {
     private var selectionView: SelectionOverlayView?
     private var resolved = false
 
+    // Borderless windows must override canBecomeKey to receive keyboard events (e.g. ESC)
+    override var canBecomeKey: Bool { true }
+
     init(continuation: CheckedContinuation<CGRect, Error>) {
         self.continuation = continuation
 
@@ -219,7 +222,7 @@ private final class RegionSelectorWindow: NSWindow {
 
         NSCursor.pop()
         orderOut(nil)
-        continuation.resume(throwing: AppError.screenCapturePermissionDenied)
+        continuation.resume(throwing: AppError.screenCaptureCancelled)
     }
 }
 

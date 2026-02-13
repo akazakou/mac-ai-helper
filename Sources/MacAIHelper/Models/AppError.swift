@@ -12,6 +12,7 @@ enum AppError: LocalizedError, Sendable {
     case keychainError(String)
     case accessibilityPermissionDenied
     case screenCapturePermissionDenied
+    case screenCaptureCancelled
 
     var errorDescription: String? {
         switch self {
@@ -31,6 +32,8 @@ enum AppError: LocalizedError, Sendable {
             "Accessibility permission is required for global shortcuts"
         case .screenCapturePermissionDenied:
             "Screen recording permission is required for screenshots"
+        case .screenCaptureCancelled:
+            "Screenshot capture was cancelled"
         }
     }
 }
