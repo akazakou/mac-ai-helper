@@ -29,5 +29,9 @@ struct SettingsView: View {
                 .tag(SettingsTab.shortcuts)
         }
         .frame(width: 550, height: 450)
+        // Dismiss settings window on ESC key press
+        .onExitCommand {
+            NSApp.keyWindow?.close()
+        }
     }
 }

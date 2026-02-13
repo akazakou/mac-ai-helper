@@ -26,6 +26,7 @@ struct NoAPIKeysAlertView: View {
                 onDismiss()
             }
             .keyboardShortcut(.defaultAction)
+            .keyboardShortcut(.cancelAction)
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
         }

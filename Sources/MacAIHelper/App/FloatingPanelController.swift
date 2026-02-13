@@ -13,6 +13,9 @@ final class FloatingPanelController {
     /// The floating panel window
     private var panel: NSPanel?
 
+    /// Local event monitor for ESC key to dismiss the panel
+    private var escKeyMonitor: Any?
+
     init(appState: AppState) {
         self.appState = appState
     }
@@ -75,6 +78,15 @@ final class FloatingPanelController {
 
         self.panel = panel
 
+        // Monitor ESC key to dismiss the panel
+        escKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53 { // ESC key
+                self?.dismissPopup()
+                return nil // Consume the event
+            }
+            return event
+        }
+
         // Observe when the panel loses focus to auto-dismiss
         NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
@@ -93,6 +105,12 @@ final class FloatingPanelController {
 
     /// Dismisses the floating panel.
     func dismissPopup() {
+        // Remove ESC key monitor
+        if let monitor = escKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            escKeyMonitor = nil
+        }
+
         panel?.close()
         panel = nil
 
