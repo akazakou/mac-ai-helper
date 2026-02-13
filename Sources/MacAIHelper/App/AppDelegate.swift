@@ -4,6 +4,13 @@
 import AppKit
 import SwiftUI
 
+/// Identifies each tab in the Settings window for programmatic navigation
+enum SettingsTab: Hashable, Sendable {
+    case prompts
+    case apiKeys
+    case shortcuts
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Static reference for access from views (NSApp.delegate is SwiftUI's wrapper)
@@ -33,6 +40,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await appState.loadModels()
         }
+
+        // If no API keys are configured, open settings on the API Keys tab
+        if !appState.hasAPIKeys {
+            // Small delay to let the menu bar finish initializing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.openSettings(tab: .apiKeys)
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -41,8 +56,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Settings Window
 
-    /// Opens the settings window, creating it if necessary.
-    func openSettings() {
+    /// Opens the settings window on a specific tab, creating it if necessary.
+    func openSettings(tab: SettingsTab? = nil) {
+        if let tab {
+            appState.selectedSettingsTab = tab
+        }
+
         if let window = settingsWindow, window.isVisible {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -128,6 +147,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Shortcut Handlers
 
     private func handleTextShortcut() {
+        guard appState.hasAPIKeys else {
+            showNoAPIKeysAlert()
+            return
+        }
+
         let text = PasteboardService.readText()
         guard let text, !text.isEmpty else { return }
 
@@ -137,6 +161,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleScreenshotShortcut() {
+        guard appState.hasAPIKeys else {
+            showNoAPIKeysAlert()
+            return
+        }
+
         Task {
             do {
                 let imageData = try await ScreenCaptureService.captureRegion()
@@ -150,6 +179,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 appState.lastError = error.localizedDescription
             }
         }
+    }
+
+    /// Shows a centered alert informing the user that API keys are required,
+    /// then opens settings on the API Keys tab when dismissed.
+    private func showNoAPIKeysAlert() {
+        // Bring app to front so the alert is visible
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alertView = NoAPIKeysAlertView {
+            // Dismiss handler — close the alert window and open settings
+            NSApp.stopModal()
+        }
+
+        let hostingView = NSHostingView(rootView: alertView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 300, height: 220)
+
+        let window = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 220),
+            styleMask: [.titled, .hudWindow, .utilityWindow],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = hostingView
+        window.isFloatingPanel = true
+        window.center()
+        window.isReleasedWhenClosed = false
+
+        NSApp.runModal(for: window)
+        window.orderOut(nil)
+
+        openSettings(tab: .apiKeys)
     }
 
     private func showPromptPopup() {
@@ -173,8 +233,14 @@ final class AppState {
     var lastError: String?
     var showingResult = false
 
+    /// Currently selected tab in the Settings window
+    var selectedSettingsTab: SettingsTab = .prompts
+
     /// Settings loaded from persistence
     var settings: AppSettings
+
+    /// Whether at least one API key is configured
+    var hasAPIKeys: Bool { !settings.apiKeyEntries.isEmpty }
 
     /// Available AI models fetched from providers
     var availableModels: [AIModel] = []

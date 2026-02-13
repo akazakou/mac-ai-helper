@@ -107,4 +107,17 @@ final class SettingsViewModel {
         appState.saveSettings()
         AppDelegate.shared?.updateShortcuts()
     }
+
+    // MARK: - Launch at Login
+
+    /// Toggles the launch-at-login state, registering/unregistering with the system.
+    func toggleLaunchAtLogin(_ enabled: Bool) {
+        do {
+            try LaunchAtLoginService.setEnabled(enabled)
+            appState.settings.launchAtLogin = enabled
+            appState.saveSettings()
+        } catch {
+            operationError = "Failed to \(enabled ? "enable" : "disable") launch at login: \(error.localizedDescription)"
+        }
+    }
 }

@@ -13,6 +13,18 @@ struct ShortcutSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // General section
+            Text("General")
+                .font(.headline)
+
+            Toggle("Launch at Login", isOn: Binding(
+                get: { viewModel.settings.launchAtLogin },
+                set: { viewModel.toggleLaunchAtLogin($0) }
+            ))
+            .padding(.horizontal, 4)
+
+            Divider()
+
             Text("Keyboard Shortcuts")
                 .font(.headline)
 

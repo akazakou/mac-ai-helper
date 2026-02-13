@@ -18,6 +18,8 @@ struct AppSettings: Codable, Sendable {
     var promptShortcut: ShortcutDefinition
     /// Keyboard shortcut for screenshot workflow (default: ⇧⌘C)
     var screenshotShortcut: ShortcutDefinition
+    /// Whether the app should launch automatically at system login
+    var launchAtLogin: Bool
 
     /// Default settings with three starter prompts and standard shortcuts
     static var defaultSettings: AppSettings {
@@ -56,7 +58,8 @@ struct AppSettings: Codable, Sendable {
                     | CGEventFlags.maskShift.rawValue,
                 doubleTap: false,
                 displayName: "⇧⌘C"
-            )
+            ),
+            launchAtLogin: false
         )
     }
 }
