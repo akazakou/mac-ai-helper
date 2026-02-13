@@ -29,8 +29,7 @@ struct PromptPopupView: View {
                 promptListView
             }
         }
-        .frame(width: 360)
-        .frame(minHeight: 200, maxHeight: 500)
+        .frame(minWidth: 320, maxWidth: .infinity, minHeight: 200, maxHeight: .infinity, alignment: .top)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
@@ -172,7 +171,7 @@ struct PromptPopupView: View {
                 .font(.body)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 150)
+        .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity)
     }
 }
 

@@ -37,7 +37,7 @@ struct ResultView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
         }
-        .frame(minHeight: 100, maxHeight: 350)
+        .frame(minHeight: 100, maxHeight: .infinity)
     }
 
     // MARK: - Loading View

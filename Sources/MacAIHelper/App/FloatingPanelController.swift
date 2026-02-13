@@ -34,24 +34,28 @@ final class FloatingPanelController {
 
         // Create the hosting view
         let hostingView = NSHostingView(rootView: contentView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 360, height: 400)
 
-        // Create floating panel
+        // Create floating panel (resizable by the user)
         let panel = NSPanel(
-            contentRect: hostingView.frame,
-            styleMask: [.nonactivatingPanel, .titled, .closable, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
+            styleMask: [.titled, .resizable, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
 
         panel.isFloatingPanel = true
         panel.level = .floating
-        panel.titlebarAppearsTransparent = true
         panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.standardWindowButton(.closeButton)?.isHidden = true
+        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        panel.standardWindowButton(.zoomButton)?.isHidden = true
         panel.isMovableByWindowBackground = true
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
+        panel.minSize = NSSize(width: 320, height: 200)
+        panel.maxSize = NSSize(width: 800, height: 900)
         panel.contentView = hostingView
 
         // Center on screen
