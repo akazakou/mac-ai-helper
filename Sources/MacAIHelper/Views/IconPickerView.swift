@@ -11,6 +11,7 @@ enum SFSymbolCatalog {
         let symbols: [String]
     }
 
+    /// cSpell:disable
     static let categories: [Category] = [
         Category(id: "communication", name: "Communication", symbols: [
             "text.bubble", "text.bubble.fill", "bubble.left", "bubble.left.fill",
@@ -82,6 +83,7 @@ enum SFSymbolCatalog {
             "bug", "ant", "ladybug",
         ]),
     ]
+    /// cSpell:enable
 
     /// All symbols flattened into a single array (deduplicated).
     static var allSymbols: [String] {

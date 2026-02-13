@@ -6,6 +6,9 @@ import SwiftUI
 struct ShortcutSettingsView: View {
     @Bindable var viewModel: SettingsViewModel
 
+    /// Tracks screen recording permission status (loaded asynchronously)
+    @State private var hasScreenCapturePermission = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Keyboard Shortcuts")
@@ -80,15 +83,15 @@ struct ShortcutSettingsView: View {
 
                 HStack {
                     Image(
-                        systemName: ScreenCaptureService.checkPermission()
+                        systemName: hasScreenCapturePermission
                             ? "checkmark.circle.fill" : "xmark.circle.fill"
                     )
-                    .foregroundStyle(ScreenCaptureService.checkPermission() ? .green : .red)
+                    .foregroundStyle(hasScreenCapturePermission ? .green : .red)
 
                     Text("Screen Recording")
                     Spacer()
 
-                    if !ScreenCaptureService.checkPermission() {
+                    if !hasScreenCapturePermission {
                         Button("Open Settings") {
                             NSWorkspace.shared.open(
                                 URL(
@@ -107,6 +110,9 @@ struct ShortcutSettingsView: View {
             Spacer()
         }
         .padding()
+        .task {
+            hasScreenCapturePermission = await ScreenCaptureService.checkPermission()
+        }
     }
 }
 

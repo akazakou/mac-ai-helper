@@ -161,7 +161,9 @@ private func hotkeyEventCallback(
     {
         state.tapCount = 0
         state.onScreenshotShortcut()
-        return Unmanaged.passRetained(event)
+        // Consume the event to prevent it from reaching other apps
+        // (CMD+Shift+C is the system "Show Colors" shortcut in many apps)
+        return nil
     }
 
     // Check for CMD+C (potential double-tap for text shortcut)

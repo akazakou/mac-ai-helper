@@ -113,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 appState.capturedText = nil
                 showPromptPopup()
             } catch {
+                print("⚠️ Screenshot capture failed: \(error)")
                 appState.lastError = error.localizedDescription
             }
         }
