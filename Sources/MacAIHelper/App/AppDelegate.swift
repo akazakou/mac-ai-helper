@@ -68,8 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         self.settingsWindow = window
 
-        // Temporarily become a regular app so the window can appear and receive focus
-        NSApp.setActivationPolicy(.regular)
+        // Bring the window to front without showing a Dock icon
         NSApp.activate(ignoringOtherApps: true)
     }
 
