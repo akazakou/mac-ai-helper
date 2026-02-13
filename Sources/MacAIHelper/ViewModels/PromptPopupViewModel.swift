@@ -18,11 +18,6 @@ final class PromptPopupViewModel {
         self.appState = appState
     }
 
-    /// Currently available prompts from settings
-    var prompts: [Prompt] {
-        appState.settings.prompts
-    }
-
     /// All available models across providers
     var availableModels: [AIModel] {
         appState.availableModels

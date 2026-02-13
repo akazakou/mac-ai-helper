@@ -2,6 +2,7 @@
 // Settings tab for managing user-defined AI prompts (add, edit, delete, reorder).
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Represents the editor mode for the prompt sheet.
 /// Using an Identifiable enum with `.sheet(item:)` ensures the sheet is
@@ -29,53 +30,45 @@ struct PromptsSettingsView: View {
     /// The prompt pending deletion (triggers confirmation alert)
     @State private var promptToDelete: Prompt?
 
+    /// Tracks the prompt being dragged for reordering
+    @State private var draggingPrompt: Prompt?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Prompts")
                 .font(.headline)
 
-            Text("Configure the prompts that appear when you trigger the shortcut. Use {text} as a placeholder for the captured content.")
+            Text("Configure the prompts that appear when you trigger the shortcut. Use {text} as a placeholder for the captured content. Drag items to reorder.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            // Prompt list
+            // Prompt list with drag and drop support
             List {
                 ForEach(viewModel.settings.prompts) { prompt in
-                    HStack(spacing: 12) {
-                        Image(systemName: prompt.icon)
-                            .frame(width: 20)
-                            .foregroundStyle(Color.accentColor)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(prompt.title)
-                                .font(.body)
-                            Text(prompt.template)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-
-                        Spacer()
-
-                        Button {
-                            editorMode = .editing(prompt)
-                        } label: {
-                            Image(systemName: "pencil")
-                        }
-                        .buttonStyle(.borderless)
-
-                        Button {
-                            promptToDelete = prompt
-                        } label: {
-                            Image(systemName: "xmark.circle")
-                                .foregroundStyle(.red)
-                        }
-                        .buttonStyle(.borderless)
+                    PromptRowView(
+                        prompt: prompt,
+                        onEdit: { editorMode = .editing(prompt) },
+                        onDelete: { promptToDelete = prompt }
+                    )
+                    .draggable(prompt.id.uuidString) {
+                        // Drag preview
+                        PromptDragPreview(prompt: prompt)
                     }
-                    .padding(.vertical, 4)
+                    .dropDestination(for: String.self) { items, _ in
+                        guard let draggedIdString = items.first,
+                              let draggedId = UUID(uuidString: draggedIdString),
+                              let sourceIndex = viewModel.settings.prompts.firstIndex(where: { $0.id == draggedId }),
+                              let destinationIndex = viewModel.settings.prompts.firstIndex(where: { $0.id == prompt.id }),
+                              sourceIndex != destinationIndex else {
+                            return false
+                        }
+                        viewModel.movePrompt(from: IndexSet(integer: sourceIndex), to: destinationIndex > sourceIndex ? destinationIndex + 1 : destinationIndex)
+                        return true
+                    } isTargeted: { _ in
+                        // Visual feedback handled by SwiftUI
+                    }
                 }
                 .onDelete(perform: viewModel.deletePrompt)
-                .onMove(perform: viewModel.movePrompt)
             }
             .listStyle(.bordered)
 
@@ -216,5 +209,75 @@ private struct PromptEditorSheet: View {
             existing.icon = icon
             viewModel.updatePrompt(existing)
         }
+    }
+}
+
+// MARK: - Prompt Row View
+
+/// A single row in the prompts list with edit and delete actions.
+private struct PromptRowView: View {
+    let prompt: Prompt
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "line.3.horizontal")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+
+            Image(systemName: prompt.icon)
+                .frame(width: 20)
+                .foregroundStyle(Color.accentColor)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(prompt.title)
+                    .font(.body)
+                Text(prompt.template)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button {
+                onEdit()
+            } label: {
+                Image(systemName: "pencil")
+            }
+            .buttonStyle(.borderless)
+
+            Button {
+                onDelete()
+            } label: {
+                Image(systemName: "xmark.circle")
+                    .foregroundStyle(.red)
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Prompt Drag Preview
+
+/// Visual preview shown while dragging a prompt item.
+private struct PromptDragPreview: View {
+    let prompt: Prompt
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: prompt.icon)
+                .foregroundStyle(Color.accentColor)
+            Text(prompt.title)
+                .font(.body)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .cornerRadius(8)
+        .shadow(radius: 4)
     }
 }

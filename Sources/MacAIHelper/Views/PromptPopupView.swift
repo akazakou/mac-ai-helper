@@ -125,8 +125,8 @@ struct PromptPopupView: View {
                     .padding(.top, 4)
                 }
 
-                // Prompt buttons
-                ForEach(viewModel.prompts) { prompt in
+                // Prompt buttons - read directly from appState for reliable observation
+                ForEach(appState.settings.prompts) { prompt in
                     PromptButton(prompt: prompt) {
                         Task {
                             if let imageData = appState.capturedImage {
@@ -141,7 +141,7 @@ struct PromptPopupView: View {
                 }
 
                 // Empty state
-                if viewModel.prompts.isEmpty {
+                if appState.settings.prompts.isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "text.bubble")
                             .font(.largeTitle)
