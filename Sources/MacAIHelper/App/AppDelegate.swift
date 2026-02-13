@@ -85,7 +85,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        hotkeyService = HotkeyService()
+        hotkeyService = HotkeyService(
+            textShortcut: appState.settings.promptShortcut,
+            screenshotShortcut: appState.settings.screenshotShortcut
+        )
         hotkeyService?.onTextShortcut = { [weak self] in
             Task { @MainActor in
                 self?.handleTextShortcut()
@@ -96,6 +99,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.handleScreenshotShortcut()
             }
         }
+        hotkeyService?.startMonitoring()
+    }
+
+    // MARK: - Shortcut Updates
+
+    /// Called by SettingsViewModel when shortcuts are changed by the user.
+    func updateShortcuts() {
+        hotkeyService?.updateShortcuts(
+            textShortcut: appState.settings.promptShortcut,
+            screenshotShortcut: appState.settings.screenshotShortcut
+        )
+    }
+
+    /// Pauses global hotkey monitoring (e.g. while recording a new shortcut).
+    func pauseHotkeys() {
+        hotkeyService?.stopMonitoring()
+    }
+
+    /// Resumes global hotkey monitoring with current shortcut definitions.
+    func resumeHotkeys() {
+        hotkeyService?.updateShortcuts(
+            textShortcut: appState.settings.promptShortcut,
+            screenshotShortcut: appState.settings.screenshotShortcut
+        )
         hotkeyService?.startMonitoring()
     }
 

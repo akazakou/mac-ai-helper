@@ -94,15 +94,17 @@ final class SettingsViewModel {
 
     // MARK: - Shortcut Management
 
-    /// Updates a keyboard shortcut definition.
+    /// Updates a keyboard shortcut definition and restarts hotkey monitoring.
     func updatePromptShortcut(_ definition: ShortcutDefinition) {
         appState.settings.promptShortcut = definition
         appState.saveSettings()
+        AppDelegate.shared?.updateShortcuts()
     }
 
-    /// Updates the screenshot shortcut definition.
+    /// Updates the screenshot shortcut definition and restarts hotkey monitoring.
     func updateScreenshotShortcut(_ definition: ShortcutDefinition) {
         appState.settings.screenshotShortcut = definition
         appState.saveSettings()
+        AppDelegate.shared?.updateShortcuts()
     }
 }

@@ -1,5 +1,7 @@
 // ShortcutSettingsView.swift
 // Settings tab for viewing and managing keyboard shortcuts.
+// Uses ShortcutRecorderView for inline shortcut editing.
+// Double-tap detection is handled automatically by the recorder.
 
 import SwiftUI
 
@@ -14,25 +16,30 @@ struct ShortcutSettingsView: View {
             Text("Keyboard Shortcuts")
                 .font(.headline)
 
-            Text("These global shortcuts work from any application.")
+            Text("These global shortcuts work from any application. Click the pencil icon to change a shortcut. Press the same key twice quickly to record a double-tap sequence.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            // Shortcuts display
+            // Shortcuts editor
             Form {
                 Section("Text Prompt") {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Trigger text prompt popup")
                                 .font(.body)
-                            Text("Select text in any app, then use this shortcut. The first press copies the text, the second press opens the prompt popup.")
+                            Text("Select text in any app, then use this shortcut.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
 
                         Spacer()
 
-                        ShortcutBadge(displayName: viewModel.settings.promptShortcut.displayName)
+                        ShortcutRecorderView(
+                            shortcut: $viewModel.settings.promptShortcut,
+                            onSave: { newShortcut in
+                                viewModel.updatePromptShortcut(newShortcut)
+                            }
+                        )
                     }
                 }
 
@@ -41,15 +48,18 @@ struct ShortcutSettingsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Capture screenshot region")
                                 .font(.body)
-                            Text("Captures a region of the screen and opens the prompt popup for image analysis.")
+                            Text("Captures a screen region for image analysis.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
 
                         Spacer()
 
-                        ShortcutBadge(
-                            displayName: viewModel.settings.screenshotShortcut.displayName
+                        ShortcutRecorderView(
+                            shortcut: $viewModel.settings.screenshotShortcut,
+                            onSave: { newShortcut in
+                                viewModel.updateScreenshotShortcut(newShortcut)
+                            }
                         )
                     }
                 }
@@ -113,21 +123,5 @@ struct ShortcutSettingsView: View {
         .task {
             hasScreenCapturePermission = await ScreenCaptureService.checkPermission()
         }
-    }
-}
-
-// MARK: - Shortcut Badge
-
-/// A styled badge displaying a keyboard shortcut.
-struct ShortcutBadge: View {
-    let displayName: String
-
-    var body: some View {
-        Text(displayName)
-            .font(.system(.body, design: .monospaced))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color.secondary.opacity(0.15))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }
