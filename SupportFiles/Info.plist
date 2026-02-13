@@ -14,6 +14,8 @@
     <string>APPL</string>
     <key>CFBundleExecutable</key>
     <string>MacAIHelper</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <!-- No Dock icon — menu bar only -->

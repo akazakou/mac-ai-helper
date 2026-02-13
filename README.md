@@ -16,22 +16,119 @@ A native macOS menu bar utility that captures selected text or screenshots via g
 
 ## Requirements
 
-- macOS 14+ (Sonoma)
+- macOS 14+ (Sonoma) — Apple Silicon and Intel
 - Swift 6.0+
 - Xcode 16+ (for building)
 
 ## Building
 
 ```bash
-# Build the project
+# Build the project (debug, current architecture)
 swift build
 
 # Run directly
 swift run MacAIHelper
 
-# Build for release
-swift build -c release
+# Build Universal .app bundle (arm64 + x86_64)
+make app
+
+# Full release pipeline: build → sign → .pkg + .dmg
+make release
+
+# See all available targets
+make help
 ```
+
+## Release & Packaging
+
+The project uses a `Makefile` to automate building, signing, and packaging for distribution outside the App Store.
+
+### Build Targets
+
+**Development (ad-hoc signed):**
+
+| Target         | Description                                            |
+| -------------- | ------------------------------------------------------ |
+| `make app`     | Build Universal Binary .app bundle (ad-hoc signed)     |
+| `make release` | Full ad-hoc pipeline: clean → build → sign → pkg + dmg |
+
+**Distribution (Apple Developer signed):**
+
+| Target                | Description                                                         |
+| --------------------- | ------------------------------------------------------------------- |
+| `make release-signed` | Full pipeline: clean → build → sign → notarize → staple → pkg + dmg |
+| `make sign`           | Code sign the .app bundle                                           |
+| `make notarize`       | Submit .app to Apple for notarization                               |
+| `make notarize-dmg`   | Submit .dmg to Apple for notarization                               |
+| `make staple`         | Staple notarization ticket to .app                                  |
+| `make staple-dmg`     | Staple notarization ticket to .dmg                                  |
+| `make pkg`            | Create .pkg installer (signed if identity provided)                 |
+| `make dmg`            | Create .dmg disk image                                              |
+
+**Utilities:**
+
+| Target                   | Description                                |
+| ------------------------ | ------------------------------------------ |
+| `make build-arm64`       | Build release for Apple Silicon only       |
+| `make build-x86_64`      | Build release for Intel only               |
+| `make universal-binary`  | Create Universal Binary via lipo           |
+| `make icon`              | Generate AppIcon.icns from SVG             |
+| `make check-identity`    | Verify signing identities are in keychain  |
+| `make store-credentials` | Store notarization credentials in keychain |
+| `make clean`             | Remove all build artifacts                 |
+
+### Ad-hoc Build (Local Testing)
+
+```bash
+# Build with ad-hoc signing (no Apple Developer account needed)
+make release
+
+# Override version
+make release APP_VERSION=2.0.0
+```
+
+### Apple Developer Build (Distribution)
+
+For distributing outside the App Store with full Gatekeeper trust, you need an [Apple Developer account](https://developer.apple.com) ($99/year).
+
+**Prerequisites:**
+
+1. A **Developer ID Application** certificate installed in your keychain
+2. A **Developer ID Installer** certificate installed in your keychain
+3. An [app-specific password](https://appleid.apple.com) for notarization
+
+**One-time setup — store notarization credentials in keychain:**
+
+```bash
+make store-credentials APPLE_ID="you@example.com" TEAM_ID="XXXXXXXXXX"
+```
+
+**Full signed + notarized release:**
+
+```bash
+make release-signed \
+  SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+  INSTALLER_SIGNING_IDENTITY="Developer ID Installer: Your Name (TEAMID)" \
+  APPLE_ID="you@example.com" \
+  TEAM_ID="XXXXXXXXXX" \
+  APP_PASSWORD="@keychain:notarytool"
+```
+
+**Check available signing identities:**
+
+```bash
+make check-identity
+```
+
+### Output Artifacts
+
+After `make release` or `make release-signed`, the following are produced in `build/`:
+
+- `build/release/MacAIHelper.app` — Signed Universal Binary application
+- `build/MacAIHelper-X.Y.Z.pkg` — macOS installer package (installs to /Applications)
+- `build/MacAIHelper-X.Y.Z.dmg` — Disk image with drag-to-install
+
+With `make release-signed`, all artifacts are Developer ID signed, Apple notarized, and have stapled tickets — ready for download distribution.
 
 ## Setup
 

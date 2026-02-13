@@ -6,12 +6,17 @@ xcuserdata/
 
 # Build
 .build/
+.build-arm64/
+.build-x86_64/
 build/
 DerivedData/
 *.o
 *.dSYM
 *.ipa
 *.app
+*.pkg
+*.dmg
+*.icns
 
 # Swift Package Manager
 .swiftpm/
