@@ -96,16 +96,7 @@ struct PromptsSettingsView: View {
                         .border(Color.secondary.opacity(0.3))
                 }
 
-                TextField("SF Symbol Icon", text: $editorIcon)
-                    .textFieldStyle(.roundedBorder)
-
-                HStack {
-                    Image(systemName: editorIcon)
-                        .foregroundStyle(Color.accentColor)
-                    Text("Preview")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                IconPickerView(selectedIcon: $editorIcon)
             }
 
             HStack {

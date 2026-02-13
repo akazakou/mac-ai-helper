@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:mac-ai-helper}",
+      "name": "Debug MacAIHelper",
+      "target": "MacAIHelper",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug MacAIHelper"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:mac-ai-helper}",
+      "name": "Release MacAIHelper",
+      "target": "MacAIHelper",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release MacAIHelper"
+    }
+  ]
+}
