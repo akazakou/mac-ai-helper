@@ -168,9 +168,13 @@ final class AppState {
     /// Whether models are currently being loaded
     var isLoadingModels = false
 
-    /// Fetches models from all configured providers (runs once at startup).
+    /// Fetches models from all configured providers.
+    /// Uses a single keychain read to avoid multiple password prompts.
     func loadModels() async {
         isLoadingModels = true
+
+        // Read all API keys in a single keychain access (one password prompt)
+        let cachedKeys = KeychainService.readAllKeys()
 
         let configuredProviders = Set(settings.apiKeyEntries.map(\.provider))
         var allModels: [AIModel] = []
@@ -178,7 +182,8 @@ final class AppState {
         for provider in configuredProviders {
             do {
                 let apiKey = try KeychainService.apiKey(
-                    for: provider, entries: settings.apiKeyEntries
+                    for: provider, entries: settings.apiKeyEntries,
+                    cachedKeys: cachedKeys
                 )
                 let models = try await AIServiceRouter.fetchModels(
                     provider: provider, apiKey: apiKey
