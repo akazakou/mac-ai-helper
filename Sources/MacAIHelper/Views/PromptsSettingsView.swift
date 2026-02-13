@@ -3,22 +3,31 @@
 
 import SwiftUI
 
+/// Represents the editor mode for the prompt sheet.
+/// Using an Identifiable enum with `.sheet(item:)` ensures the sheet is
+/// recreated each time, avoiding SwiftUI stale-state issues.
+enum PromptEditorMode: Identifiable {
+    case new
+    case editing(Prompt)
+
+    var id: String {
+        switch self {
+        case .new:
+            return "new"
+        case .editing(let prompt):
+            return prompt.id.uuidString
+        }
+    }
+}
+
 struct PromptsSettingsView: View {
     @Bindable var viewModel: SettingsViewModel
 
-    /// Controls whether the add/edit sheet is presented
-    @State private var showingEditor = false
-
-    /// The prompt currently being edited (nil for new prompt)
-    @State private var editingPrompt: Prompt?
+    /// Controls the editor sheet presentation and provides context
+    @State private var editorMode: PromptEditorMode?
 
     /// The prompt pending deletion (triggers confirmation alert)
     @State private var promptToDelete: Prompt?
-
-    /// Fields for the prompt editor
-    @State private var editorTitle = ""
-    @State private var editorTemplate = ""
-    @State private var editorIcon = "text.bubble"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -49,7 +58,7 @@ struct PromptsSettingsView: View {
                         Spacer()
 
                         Button {
-                            startEditing(prompt)
+                            editorMode = .editing(prompt)
                         } label: {
                             Image(systemName: "pencil")
                         }
@@ -73,7 +82,7 @@ struct PromptsSettingsView: View {
             // Add button
             HStack {
                 Button {
-                    startAddingNew()
+                    editorMode = .new
                 } label: {
                     Label("Add Prompt", systemImage: "plus")
                 }
@@ -82,8 +91,10 @@ struct PromptsSettingsView: View {
             }
         }
         .padding()
-        .sheet(isPresented: $showingEditor) {
-            promptEditorSheet
+        .sheet(item: $editorMode) { mode in
+            PromptEditorSheet(mode: mode, viewModel: viewModel) {
+                editorMode = nil
+            }
         }
         .alert(
             "Delete Prompt",
@@ -105,66 +116,7 @@ struct PromptsSettingsView: View {
         }
     }
 
-    // MARK: - Prompt Editor Sheet
-
-    private var promptEditorSheet: some View {
-        VStack(spacing: 16) {
-            Text(editingPrompt == nil ? "New Prompt" : "Edit Prompt")
-                .font(.headline)
-
-            Form {
-                TextField("Title", text: $editorTitle)
-                    .textFieldStyle(.roundedBorder)
-
-                VStack(alignment: .leading) {
-                    Text("Template")
-                        .font(.caption)
-                    TextEditor(text: $editorTemplate)
-                        .font(.body.monospaced())
-                        .frame(minHeight: 100)
-                        .border(Color.secondary.opacity(0.3))
-                }
-
-                IconPickerView(selectedIcon: $editorIcon)
-            }
-
-            HStack {
-                Button("Cancel") {
-                    showingEditor = false
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button(editingPrompt == nil ? "Add" : "Save") {
-                    savePrompt()
-                    showingEditor = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(editorTitle.isEmpty || editorTemplate.isEmpty)
-            }
-        }
-        .padding()
-        .frame(width: 400, height: 350)
-    }
-
     // MARK: - Helpers
-
-    private func startAddingNew() {
-        editingPrompt = nil
-        editorTitle = ""
-        editorTemplate = "{text}"
-        editorIcon = "text.bubble"
-        showingEditor = true
-    }
-
-    private func startEditing(_ prompt: Prompt) {
-        editingPrompt = prompt
-        editorTitle = prompt.title
-        editorTemplate = prompt.template
-        editorIcon = prompt.icon
-        showingEditor = true
-    }
 
     private func confirmDelete() {
         guard let prompt = promptToDelete,
@@ -175,15 +127,94 @@ struct PromptsSettingsView: View {
         viewModel.deletePrompt(at: IndexSet(integer: index))
         promptToDelete = nil
     }
+}
+
+// MARK: - Prompt Editor Sheet (separate view to guarantee fresh state)
+
+/// A standalone sheet view for adding/editing a prompt.
+/// Being a separate struct ensures all `@State` fields are initialized fresh
+/// each time the sheet is presented, eliminating stale-state bugs.
+private struct PromptEditorSheet: View {
+    let mode: PromptEditorMode
+    let viewModel: SettingsViewModel
+    let dismiss: () -> Void
+
+    @State private var title: String
+    @State private var template: String
+    @State private var icon: String
+
+    init(mode: PromptEditorMode, viewModel: SettingsViewModel, dismiss: @escaping () -> Void) {
+        self.mode = mode
+        self.viewModel = viewModel
+        self.dismiss = dismiss
+
+        switch mode {
+        case .new:
+            _title = State(initialValue: "")
+            _template = State(initialValue: "{text}")
+            _icon = State(initialValue: "text.bubble")
+        case .editing(let prompt):
+            _title = State(initialValue: prompt.title)
+            _template = State(initialValue: prompt.template)
+            _icon = State(initialValue: prompt.icon)
+        }
+    }
+
+    private var isEditing: Bool {
+        if case .editing = mode { return true }
+        return false
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text(isEditing ? "Edit Prompt" : "New Prompt")
+                .font(.headline)
+
+            Form {
+                TextField("Title", text: $title)
+                    .textFieldStyle(.roundedBorder)
+
+                VStack(alignment: .leading) {
+                    Text("Template")
+                        .font(.caption)
+                    TextEditor(text: $template)
+                        .font(.body.monospaced())
+                        .frame(minHeight: 100)
+                        .border(Color.secondary.opacity(0.3))
+                }
+
+                IconPickerView(selectedIcon: $icon)
+            }
+
+            HStack {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button(isEditing ? "Save" : "Add") {
+                    savePrompt()
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(title.isEmpty || template.isEmpty)
+            }
+        }
+        .padding()
+        .frame(width: 400, height: 350)
+    }
 
     private func savePrompt() {
-        if var existing = editingPrompt {
-            existing.title = editorTitle
-            existing.template = editorTemplate
-            existing.icon = editorIcon
+        switch mode {
+        case .new:
+            viewModel.addPrompt(title: title, template: template, icon: icon)
+        case .editing(var existing):
+            existing.title = title
+            existing.template = template
+            existing.icon = icon
             viewModel.updatePrompt(existing)
-        } else {
-            viewModel.addPrompt(title: editorTitle, template: editorTemplate, icon: editorIcon)
         }
     }
 }
