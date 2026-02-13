@@ -7,7 +7,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "MacAIHelper",
-            path: "Sources/MacAIHelper"
+            path: "Sources/MacAIHelper",
+            resources: [
+                .copy("Resources/icon.svg"),
+            ]
         ),
         .testTarget(
             name: "MacAIHelperTests",
