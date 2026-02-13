@@ -99,12 +99,59 @@ struct KeychainService: Sendable {
         }
     }
 
+    /// Retrieves all API keys for the app's service in a single Keychain query.
+    /// Returns a dictionary mapping account (UUID string) to its API key.
+    static func readAllKeys() -> [String: String] {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecReturnAttributes as String: true,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess,
+            let items = result as? [[String: Any]]
+        else {
+            return [:]
+        }
+
+        var keys: [String: String] = [:]
+        for item in items {
+            guard let account = item[kSecAttrAccount as String] as? String,
+                let data = item[kSecValueData as String] as? Data,
+                let key = String(data: data, encoding: .utf8),
+                !key.isEmpty
+            else { continue }
+            keys[account] = key
+        }
+        return keys
+    }
+
     /// Retrieves the first available API key for a given provider from settings.
     static func apiKey(for provider: AIProvider, entries: [APIKeyEntry]) throws -> String {
         guard let entry = entries.first(where: { $0.provider == provider }) else {
             throw AppError.noAPIKey(provider)
         }
         guard let key = try readKey(for: entry.id), !key.isEmpty else {
+            throw AppError.noAPIKey(provider)
+        }
+        return key
+    }
+
+    /// Retrieves the API key for a provider from a pre-loaded keys dictionary.
+    static func apiKey(
+        for provider: AIProvider,
+        entries: [APIKeyEntry],
+        cachedKeys: [String: String]
+    ) throws -> String {
+        guard let entry = entries.first(where: { $0.provider == provider }) else {
+            throw AppError.noAPIKey(provider)
+        }
+        guard let key = cachedKeys[entry.id.uuidString], !key.isEmpty else {
             throw AppError.noAPIKey(provider)
         }
         return key

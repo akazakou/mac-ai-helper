@@ -28,6 +28,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         setupHotkeyService()
+
+        // Load AI models at startup so the popup opens instantly
+        Task {
+            await appState.loadModels()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -157,6 +162,41 @@ final class AppState {
             try settingsService.saveSettings(settings)
         } catch {
             lastError = "Failed to save settings: \(error.localizedDescription)"
+        }
+    }
+
+    /// Whether models are currently being loaded
+    var isLoadingModels = false
+
+    /// Fetches models from all configured providers (runs once at startup).
+    func loadModels() async {
+        isLoadingModels = true
+
+        let configuredProviders = Set(settings.apiKeyEntries.map(\.provider))
+        var allModels: [AIModel] = []
+
+        for provider in configuredProviders {
+            do {
+                let apiKey = try KeychainService.apiKey(
+                    for: provider, entries: settings.apiKeyEntries
+                )
+                let models = try await AIServiceRouter.fetchModels(
+                    provider: provider, apiKey: apiKey
+                )
+                allModels.append(contentsOf: models)
+            } catch {
+                print("⚠️ Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)")
+            }
+        }
+
+        availableModels = allModels.sorted { $0.name < $1.name }
+        isLoadingModels = false
+
+        // Auto-select first model if none selected
+        if settings.selectedModelId == nil, let firstModel = availableModels.first {
+            settings.selectedModelId = firstModel.id
+            settings.selectedProvider = firstModel.provider
+            saveSettings()
         }
     }
 }

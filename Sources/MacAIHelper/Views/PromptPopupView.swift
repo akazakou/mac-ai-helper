@@ -34,7 +34,7 @@ struct PromptPopupView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
         .task {
-            await viewModel.loadModels()
+            await viewModel.loadModelsIfNeeded()
         }
     }
 
