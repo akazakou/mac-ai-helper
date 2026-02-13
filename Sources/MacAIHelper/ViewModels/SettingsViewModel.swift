@@ -68,8 +68,10 @@ final class SettingsViewModel {
     }
 
     /// Deletes an API key entry and removes it from the Keychain.
-    func deleteAPIKey(_ entry: APIKeyEntry) throws {
-        try KeychainService.deleteKey(for: entry.id)
+    /// Always removes the settings entry even if keychain cleanup fails.
+    func deleteAPIKey(_ entry: APIKeyEntry) {
+        // Best-effort keychain cleanup — don't block settings removal
+        try? KeychainService.deleteKey(for: entry.id)
         appState.settings.apiKeyEntries.removeAll { $0.id == entry.id }
         appState.saveSettings()
     }

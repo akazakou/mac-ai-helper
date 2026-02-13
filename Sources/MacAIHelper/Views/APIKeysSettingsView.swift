@@ -102,11 +102,7 @@ struct APIKeysSettingsView: View {
     }
 
     private func deleteKey(_ entry: APIKeyEntry) {
-        do {
-            try viewModel.deleteAPIKey(entry)
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        viewModel.deleteAPIKey(entry)
+        errorMessage = nil
     }
 }
