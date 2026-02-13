@@ -31,6 +31,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Tip Jar window (retained to keep it alive)
     private var tipJarWindow: NSWindow?
 
+    /// Timer that silently polls for accessibility permission after initial prompt
+    private var permissionPollTimer: Timer?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
 
@@ -131,13 +134,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupHotkeyService() {
         guard HotkeyService.checkAccessibilityPermission() else {
+            // Show permission dialog once on startup
             HotkeyService.requestAccessibilityPermission()
-            // Retry after a delay — user may grant permission
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-                self?.setupHotkeyService()
-            }
+            // Start silently polling until the user grants permission
+            startPermissionPolling()
             return
         }
+
+        activateHotkeyMonitoring()
+    }
+
+    /// Silently polls for accessibility permission without showing any dialog.
+    /// Automatically activates hotkey monitoring once permission is granted.
+    private func startPermissionPolling() {
+        // Invalidate any existing timer to avoid duplicates
+        permissionPollTimer?.invalidate()
+
+        permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // Silent check — no dialog shown
+                if HotkeyService.checkAccessibilityPermission() {
+                    self.permissionPollTimer?.invalidate()
+                    self.permissionPollTimer = nil
+                    self.activateHotkeyMonitoring()
+                }
+            }
+        }
+    }
+
+    /// Creates the hotkey service and starts monitoring global keyboard events.
+    private func activateHotkeyMonitoring() {
+        // Stop polling if still active
+        permissionPollTimer?.invalidate()
+        permissionPollTimer = nil
 
         hotkeyService = HotkeyService(
             textShortcut: appState.settings.promptShortcut,
