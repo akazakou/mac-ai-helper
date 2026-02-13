@@ -28,6 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Settings window (retained to keep it alive)
     private var settingsWindow: NSWindow?
 
+    /// Tip Jar window (retained to keep it alive)
+    private var tipJarWindow: NSWindow?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
 
@@ -88,6 +91,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.settingsWindow = window
 
         // Bring the window to front without showing a Dock icon
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Tip Jar Window
+
+    /// Opens the Tip Jar window, creating it if necessary.
+    func openTipJar() {
+        if let window = tipJarWindow, window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let tipJarView = TipJarView { [weak self] in
+            self?.tipJarWindow?.orderOut(nil)
+        }
+
+        let hostingView = NSHostingView(rootView: tipJarView)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 420),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Tip Developer"
+        window.contentView = hostingView
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+
+        self.tipJarWindow = window
+
         NSApp.activate(ignoringOtherApps: true)
     }
 

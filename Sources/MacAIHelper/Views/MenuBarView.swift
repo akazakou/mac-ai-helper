@@ -15,6 +15,13 @@ struct MenuBarView: View {
             Divider()
         }
 
+        // Tip Developer
+        Button("Tip Developer ❤️") {
+            AppDelegate.shared?.openTipJar()
+        }
+
+        Divider()
+
         // Open Settings
         Button("Settings…") {
             // Use static shared reference since NSApp.delegate is SwiftUI's wrapper
