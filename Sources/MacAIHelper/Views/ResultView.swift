@@ -78,6 +78,8 @@ struct ResultView: View {
             // Copy button
             Button {
                 viewModel.copyResponse()
+                viewModel.dismiss()
+                onDismiss?()
             } label: {
                 Label(
                     viewModel.copied ? "Copied!" : "Copy",
