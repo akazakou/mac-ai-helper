@@ -19,11 +19,11 @@ enum TipPurchaseState: Sendable {
 final class TipJarService {
     /// All product identifiers for tip amounts
     static let productIDs: [String] = [
-        "pro.kantora.MacAIHelper.tip.1",
-        "pro.kantora.MacAIHelper.tip.5",
-        "pro.kantora.MacAIHelper.tip.10",
-        "pro.kantora.MacAIHelper.tip.30",
-        "pro.kantora.MacAIHelper.tip.50",
+        "com.castloud.MacAIHelper.tip.1",
+        "com.castloud.MacAIHelper.tip.5",
+        "com.castloud.MacAIHelper.tip.10",
+        "com.castloud.MacAIHelper.tip.30",
+        "com.castloud.MacAIHelper.tip.50",
     ]
 
     /// Loaded StoreKit products, sorted by price ascending

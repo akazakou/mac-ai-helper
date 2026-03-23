@@ -3,6 +3,7 @@
 // Configures the app as a menu-bar-only utility using MenuBarExtra.
 
 import AppKit
+import MacAIHelperLib
 import SwiftUI
 
 @main
@@ -24,10 +25,11 @@ struct MacAIHelperApp: App {
         }
     }
 
-    /// Loads the monochrome template icon from the app bundle for menu bar display.
+    /// Loads the monochrome template icon from the main app bundle for menu bar display.
     /// The image is marked as a template so macOS auto-tints it for dark/light mode.
+    /// Resources are placed into the app bundle by the Makefile during build.
     private static func loadMenuBarIcon() -> NSImage? {
-        guard let url = Bundle.module.url(forResource: "menubar-icon", withExtension: "png"),
+        guard let url = Bundle.main.url(forResource: "menubar-icon", withExtension: "png"),
               let image = NSImage(contentsOf: url) else {
             return nil
         }

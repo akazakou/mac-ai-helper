@@ -3,7 +3,7 @@
 
 import Foundation
 
-enum AppError: LocalizedError, Sendable {
+public enum AppError: LocalizedError, Sendable {
     case noAPIKey(AIProvider)
     case noModelSelected
     case networkError(String)
@@ -14,7 +14,7 @@ enum AppError: LocalizedError, Sendable {
     case screenCapturePermissionDenied
     case screenCaptureCancelled
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .noAPIKey(let provider):
             "No API key configured for \(provider.rawValue)"

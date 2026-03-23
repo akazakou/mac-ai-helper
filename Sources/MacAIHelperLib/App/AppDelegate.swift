@@ -5,19 +5,19 @@ import AppKit
 import SwiftUI
 
 /// Identifies each tab in the Settings window for programmatic navigation
-enum SettingsTab: Hashable, Sendable {
+public enum SettingsTab: Hashable, Sendable {
     case prompts
     case apiKeys
     case shortcuts
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+public final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Static reference for access from views (NSApp.delegate is SwiftUI's wrapper)
-    static var shared: AppDelegate?
+    public static var shared: AppDelegate?
 
     /// Shared application state accessible throughout the app
-    let appState = AppState()
+    public let appState = AppState()
 
     /// Global hotkey monitoring service
     private var hotkeyService: HotkeyService?
@@ -31,10 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Tip Jar window (retained to keep it alive)
     private var tipJarWindow: NSWindow?
 
-    /// Timer that silently polls for accessibility permission after initial prompt
-    private var permissionPollTimer: Timer?
-
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    public func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
 
         // Ensure the app doesn't appear in the Dock
@@ -56,14 +53,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
+    public func applicationWillTerminate(_ notification: Notification) {
         hotkeyService?.stopMonitoring()
     }
 
     // MARK: - Settings Window
 
     /// Opens the settings window on a specific tab, creating it if necessary.
-    func openSettings(tab: SettingsTab? = nil) {
+    public func openSettings(tab: SettingsTab? = nil) {
         if let tab {
             appState.selectedSettingsTab = tab
         }
@@ -100,7 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Tip Jar Window
 
     /// Opens the Tip Jar window, creating it if necessary.
-    func openTipJar() {
+    public func openTipJar() {
         if let window = tipJarWindow, window.isVisible {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -132,47 +129,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Hotkey Service Setup
 
+    /// Initializes and starts global hotkey monitoring using KeyboardShortcuts.
+    /// No Accessibility permission is required — Carbon hotkeys work in sandbox.
     private func setupHotkeyService() {
-        guard HotkeyService.checkAccessibilityPermission() else {
-            // Show permission dialog once on startup
-            HotkeyService.requestAccessibilityPermission()
-            // Start silently polling until the user grants permission
-            startPermissionPolling()
-            return
-        }
-
-        activateHotkeyMonitoring()
-    }
-
-    /// Silently polls for accessibility permission without showing any dialog.
-    /// Automatically activates hotkey monitoring once permission is granted.
-    private func startPermissionPolling() {
-        // Invalidate any existing timer to avoid duplicates
-        permissionPollTimer?.invalidate()
-
-        permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                // Silent check — no dialog shown
-                if HotkeyService.checkAccessibilityPermission() {
-                    self.permissionPollTimer?.invalidate()
-                    self.permissionPollTimer = nil
-                    self.activateHotkeyMonitoring()
-                }
-            }
-        }
-    }
-
-    /// Creates the hotkey service and starts monitoring global keyboard events.
-    private func activateHotkeyMonitoring() {
-        // Stop polling if still active
-        permissionPollTimer?.invalidate()
-        permissionPollTimer = nil
-
-        hotkeyService = HotkeyService(
-            textShortcut: appState.settings.promptShortcut,
-            screenshotShortcut: appState.settings.screenshotShortcut
-        )
+        hotkeyService = HotkeyService()
         hotkeyService?.onTextShortcut = { [weak self] in
             Task { @MainActor in
                 self?.handleTextShortcut()
@@ -183,30 +143,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.handleScreenshotShortcut()
             }
         }
-        hotkeyService?.startMonitoring()
-    }
-
-    // MARK: - Shortcut Updates
-
-    /// Called by SettingsViewModel when shortcuts are changed by the user.
-    func updateShortcuts() {
-        hotkeyService?.updateShortcuts(
-            textShortcut: appState.settings.promptShortcut,
-            screenshotShortcut: appState.settings.screenshotShortcut
-        )
-    }
-
-    /// Pauses global hotkey monitoring (e.g. while recording a new shortcut).
-    func pauseHotkeys() {
-        hotkeyService?.stopMonitoring()
-    }
-
-    /// Resumes global hotkey monitoring with current shortcut definitions.
-    func resumeHotkeys() {
-        hotkeyService?.updateShortcuts(
-            textShortcut: appState.settings.promptShortcut,
-            screenshotShortcut: appState.settings.screenshotShortcut
-        )
         hotkeyService?.startMonitoring()
     }
 
@@ -291,33 +227,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 /// Observable application state shared across views and services
 @Observable
 @MainActor
-final class AppState {
-    var capturedText: String?
-    var capturedImage: Data?
-    var aiResponse: String?
-    var isLoading = false
-    var lastError: String?
-    var showingResult = false
+public final class AppState {
+    public var capturedText: String?
+    public var capturedImage: Data?
+    public var aiResponse: String?
+    public var isLoading = false
+    public var lastError: String?
+    public var showingResult = false
 
     /// Currently selected tab in the Settings window
-    var selectedSettingsTab: SettingsTab = .prompts
+    public var selectedSettingsTab: SettingsTab = .prompts
 
     /// Settings loaded from persistence
-    var settings: AppSettings
+    public var settings: AppSettings
 
     /// Whether at least one API key is configured
-    var hasAPIKeys: Bool { !settings.apiKeyEntries.isEmpty }
+    public var hasAPIKeys: Bool { !settings.apiKeyEntries.isEmpty }
 
     /// Available AI models fetched from providers
-    var availableModels: [AIModel] = []
+    public var availableModels: [AIModel] = []
 
     private let settingsService = SettingsService()
 
-    init() {
+    public init() {
         self.settings = SettingsService().loadSettings()
     }
 
-    func saveSettings() {
+    public func saveSettings() {
         do {
             try settingsService.saveSettings(settings)
         } catch {
@@ -326,11 +262,11 @@ final class AppState {
     }
 
     /// Whether models are currently being loaded
-    var isLoadingModels = false
+    public var isLoadingModels = false
 
     /// Fetches models from all configured providers.
     /// Uses a single keychain read to avoid multiple password prompts.
-    func loadModels() async {
+    public func loadModels() async {
         isLoadingModels = true
 
         // Read all API keys in a single keychain access (one password prompt)

@@ -8,7 +8,7 @@ import Security
 
 struct KeychainService: Sendable {
     /// Keychain service identifier
-    private static let serviceName = "pro.kantora.MacAIHelper"
+    private static let serviceName = "com.castloud.MacAIHelper"
 
     /// Fixed account name for the consolidated key store
     private static let storeAccount = "api-keys-store"

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
     <title>Mac AI Helper</title>
-    <organization>pro.kantora</organization>
+    <organization>com.castloud</organization>
     <domains enable_localSystem="true"/>
     <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
 
@@ -17,24 +17,24 @@
     <conclusion file="conclusion.html" mime-type="text/html"/>
 
     <!-- Reference to the component package built by pkgbuild -->
-    <pkg-ref id="pro.kantora.MacAIHelper"/>
+    <pkg-ref id="com.castloud.MacAIHelper"/>
 
     <choices-outline>
         <line choice="default">
-            <line choice="pro.kantora.MacAIHelper"/>
+            <line choice="com.castloud.MacAIHelper"/>
         </line>
     </choices-outline>
 
     <choice id="default"/>
 
-    <choice id="pro.kantora.MacAIHelper"
+    <choice id="com.castloud.MacAIHelper"
             visible="false"
             title="Mac AI Helper"
             description="A native macOS menu bar AI assistant">
-        <pkg-ref id="pro.kantora.MacAIHelper"/>
+        <pkg-ref id="com.castloud.MacAIHelper"/>
     </choice>
 
-    <pkg-ref id="pro.kantora.MacAIHelper"
+    <pkg-ref id="com.castloud.MacAIHelper"
              version="0"
              onConclusion="none">MacAIHelper-component.pkg</pkg-ref>
 </installer-gui-script>

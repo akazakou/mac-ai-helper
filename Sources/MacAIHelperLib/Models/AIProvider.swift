@@ -3,15 +3,15 @@
 
 import Foundation
 
-enum AIProvider: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum AIProvider: String, Codable, CaseIterable, Identifiable, Sendable {
     case openAI = "OpenAI"
     case anthropic = "Anthropic"
     case gemini = "Google Gemini"
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
     /// Base URL for the provider's API
-    var baseURL: URL {
+    public var baseURL: URL {
         switch self {
         case .openAI: URL(string: "https://api.openai.com/v1")!
         case .anthropic: URL(string: "https://api.anthropic.com/v1")!
@@ -20,7 +20,7 @@ enum AIProvider: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 
     /// API endpoint path for listing available models
-    var modelsEndpoint: String {
+    public var modelsEndpoint: String {
         switch self {
         case .openAI: "/models"
         case .anthropic: "/models"
@@ -29,7 +29,7 @@ enum AIProvider: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 
     /// URL to the provider's API key management page
-    var helpURL: URL {
+    public var helpURL: URL {
         switch self {
         case .openAI: URL(string: "https://platform.openai.com/api-keys")!
         case .anthropic: URL(string: "https://console.anthropic.com/settings/keys")!

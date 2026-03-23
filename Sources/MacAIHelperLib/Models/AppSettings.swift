@@ -1,28 +1,25 @@
 // AppSettings.swift
 // Application settings container with default configuration.
 // Persisted as JSON in the Application Support directory.
+// Note: Keyboard shortcuts are managed by the KeyboardShortcuts framework
+// and stored separately in UserDefaults.
 
-import CoreGraphics
 import Foundation
 
-struct AppSettings: Codable, Sendable {
+public struct AppSettings: Codable, Sendable {
     /// User-defined prompt templates
-    var prompts: [Prompt]
+    public var prompts: [Prompt]
     /// Metadata for API keys (actual keys stored in Keychain)
-    var apiKeyEntries: [APIKeyEntry]
+    public var apiKeyEntries: [APIKeyEntry]
     /// Currently selected AI model identifier
-    var selectedModelId: String?
+    public var selectedModelId: String?
     /// Currently selected AI provider
-    var selectedProvider: AIProvider?
-    /// Keyboard shortcut for text prompt workflow (default: ⌘C+C)
-    var promptShortcut: ShortcutDefinition
-    /// Keyboard shortcut for screenshot workflow (default: ⇧⌘C)
-    var screenshotShortcut: ShortcutDefinition
+    public var selectedProvider: AIProvider?
     /// Whether the app should launch automatically at system login
-    var launchAtLogin: Bool
+    public var launchAtLogin: Bool
 
-    /// Default settings with three starter prompts and standard shortcuts
-    static var defaultSettings: AppSettings {
+    /// Default settings with three starter prompts
+    public static var defaultSettings: AppSettings {
         AppSettings(
             prompts: [
                 Prompt(
@@ -46,19 +43,6 @@ struct AppSettings: Codable, Sendable {
             apiKeyEntries: [],
             selectedModelId: nil,
             selectedProvider: nil,
-            promptShortcut: ShortcutDefinition(
-                keyCode: 8,  // C key
-                modifierFlags: CGEventFlags.maskCommand.rawValue,
-                doubleTap: true,
-                displayName: "⌘C + C"
-            ),
-            screenshotShortcut: ShortcutDefinition(
-                keyCode: 8,  // C key
-                modifierFlags: CGEventFlags.maskCommand.rawValue
-                    | CGEventFlags.maskShift.rawValue,
-                doubleTap: false,
-                displayName: "⇧⌘C"
-            ),
             launchAtLogin: false
         )
     }

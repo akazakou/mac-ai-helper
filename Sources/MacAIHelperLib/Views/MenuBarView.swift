@@ -3,12 +3,15 @@
 // Uses only NSMenu-compatible items (Button, Divider, Text) since MenuBarExtra
 // defaults to .menu style which renders as a native NSMenu.
 
+import KeyboardShortcuts
 import SwiftUI
 
-struct MenuBarView: View {
+public struct MenuBarView: View {
     @Environment(AppState.self) private var appState
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         // Status indicator (rendered as a disabled menu item)
         if appState.settings.apiKeyEntries.isEmpty {
             Text("⚠ No API keys configured")
@@ -33,8 +36,8 @@ struct MenuBarView: View {
 
         // Shortcut hints (rendered as disabled/info menu items)
         Text("Shortcuts:")
-        Text("  \(appState.settings.promptShortcut.displayName) — Text prompt")
-        Text("  \(appState.settings.screenshotShortcut.displayName) — Screenshot")
+        Text("  \(shortcutDisplayName(.textPrompt)) — Text prompt")
+        Text("  \(shortcutDisplayName(.screenshotCapture)) — Screenshot")
 
         Divider()
 
@@ -43,5 +46,14 @@ struct MenuBarView: View {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q", modifiers: .command)
+    }
+
+    /// Returns a human-readable display name for a KeyboardShortcuts.Name,
+    /// or a fallback if the shortcut is not configured.
+    private func shortcutDisplayName(_ name: KeyboardShortcuts.Name) -> String {
+        guard let shortcut = KeyboardShortcuts.getShortcut(for: name) else {
+            return "Not set"
+        }
+        return shortcut.description
     }
 }

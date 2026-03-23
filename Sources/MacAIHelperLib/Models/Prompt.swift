@@ -3,16 +3,16 @@
 
 import Foundation
 
-struct Prompt: Identifiable, Codable, Hashable, Sendable {
-    let id: UUID
+public struct Prompt: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
     /// Display text shown in the prompt list, e.g. "Translate text to English"
-    var title: String
+    public var title: String
     /// Full prompt template with {text} placeholder for user content
-    var template: String
+    public var template: String
     /// SF Symbol name for the prompt icon
-    var icon: String
+    public var icon: String
 
-    init(id: UUID = UUID(), title: String, template: String, icon: String = "text.bubble") {
+    public init(id: UUID = UUID(), title: String, template: String, icon: String = "text.bubble") {
         self.id = id
         self.title = title
         self.template = template
@@ -20,7 +20,7 @@ struct Prompt: Identifiable, Codable, Hashable, Sendable {
     }
 
     /// Resolves the template by replacing {text} with actual content
-    func resolved(with text: String) -> String {
+    public func resolved(with text: String) -> String {
         template.replacingOccurrences(of: "{text}", with: text)
     }
 }

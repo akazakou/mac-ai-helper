@@ -1,0 +1,136 @@
+{
+  "identifier" : "com.castloud.MacAIHelper.storekit",
+  "type" : "local",
+  "version" : 3,
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "tip_1",
+      "localizations" : [
+        {
+          "description" : "A small tip to support development",
+          "displayName" : "Small Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.castloud.MacAIHelper.tip.1",
+      "referenceName" : "Small Tip ($0.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "tip_5",
+      "localizations" : [
+        {
+          "description" : "A medium tip to support development",
+          "displayName" : "Medium Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.castloud.MacAIHelper.tip.5",
+      "referenceName" : "Medium Tip ($4.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "tip_10",
+      "localizations" : [
+        {
+          "description" : "A large tip to support development",
+          "displayName" : "Large Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.castloud.MacAIHelper.tip.10",
+      "referenceName" : "Large Tip ($9.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "29.99",
+      "familyShareable" : false,
+      "internalID" : "tip_30",
+      "localizations" : [
+        {
+          "description" : "A generous tip to support development",
+          "displayName" : "Generous Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.castloud.MacAIHelper.tip.30",
+      "referenceName" : "Generous Tip ($29.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "tip_50",
+      "localizations" : [
+        {
+          "description" : "A mega tip to support development",
+          "displayName" : "Mega Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.castloud.MacAIHelper.tip.50",
+      "referenceName" : "Mega Tip ($49.99)",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "com.castloud.MacAIHelper",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Transaction Manager"
+      }
+    ]
+  }
+}

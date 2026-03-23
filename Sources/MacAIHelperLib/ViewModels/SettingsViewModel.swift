@@ -1,5 +1,6 @@
 // SettingsViewModel.swift
-// Manages all settings CRUD operations for prompts, API keys, and shortcuts.
+// Manages all settings CRUD operations for prompts and API keys.
+// Keyboard shortcuts are managed by the KeyboardShortcuts framework directly.
 
 import Foundation
 
@@ -90,22 +91,6 @@ final class SettingsViewModel {
             for: provider, entries: appState.settings.apiKeyEntries
         )
         return try await AIServiceRouter.fetchModels(provider: provider, apiKey: apiKey)
-    }
-
-    // MARK: - Shortcut Management
-
-    /// Updates a keyboard shortcut definition and restarts hotkey monitoring.
-    func updatePromptShortcut(_ definition: ShortcutDefinition) {
-        appState.settings.promptShortcut = definition
-        appState.saveSettings()
-        AppDelegate.shared?.updateShortcuts()
-    }
-
-    /// Updates the screenshot shortcut definition and restarts hotkey monitoring.
-    func updateScreenshotShortcut(_ definition: ShortcutDefinition) {
-        appState.settings.screenshotShortcut = definition
-        appState.saveSettings()
-        AppDelegate.shared?.updateShortcuts()
     }
 
     // MARK: - Launch at Login

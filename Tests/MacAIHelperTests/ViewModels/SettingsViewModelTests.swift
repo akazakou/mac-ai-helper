@@ -4,7 +4,7 @@
 import Foundation
 import Testing
 
-@testable import MacAIHelper
+@testable import MacAIHelperLib
 
 @Suite("SettingsViewModel Tests")
 struct SettingsViewModelTests {
@@ -26,19 +26,10 @@ struct SettingsViewModelTests {
         #expect(settings.selectedProvider == nil)
     }
 
-    @Test("Default shortcuts are configured correctly")
-    func defaultShortcuts() {
+    @Test("Default settings have launch at login disabled")
+    func defaultLaunchAtLogin() {
         let settings = AppSettings.defaultSettings
-
-        // Text prompt shortcut: CMD+C+C (double tap)
-        #expect(settings.promptShortcut.keyCode == 8)  // C key
-        #expect(settings.promptShortcut.doubleTap == true)
-        #expect(settings.promptShortcut.displayName == "⌘C + C")
-
-        // Screenshot shortcut: CMD+Shift+C
-        #expect(settings.screenshotShortcut.keyCode == 8)  // C key
-        #expect(settings.screenshotShortcut.doubleTap == false)
-        #expect(settings.screenshotShortcut.displayName == "⇧⌘C")
+        #expect(settings.launchAtLogin == false)
     }
 
     @Test("Prompt template resolves correctly")
@@ -74,8 +65,7 @@ struct SettingsViewModelTests {
         let loaded = service.loadSettings()
 
         #expect(loaded.prompts.count == original.prompts.count)
-        #expect(loaded.promptShortcut.keyCode == original.promptShortcut.keyCode)
-        #expect(loaded.screenshotShortcut.displayName == original.screenshotShortcut.displayName)
+        #expect(loaded.launchAtLogin == original.launchAtLogin)
     }
 
     @Test("AIProvider has correct base URLs")

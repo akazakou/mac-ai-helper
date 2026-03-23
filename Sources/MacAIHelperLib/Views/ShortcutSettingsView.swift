@@ -1,8 +1,10 @@
 // ShortcutSettingsView.swift
 // Settings tab for viewing and managing keyboard shortcuts.
-// Uses ShortcutRecorderView for inline shortcut editing.
-// Double-tap detection is handled automatically by the recorder.
+// Uses KeyboardShortcuts.Recorder for inline shortcut editing.
+// No Accessibility permission required — Carbon RegisterEventHotKey
+// works inside App Sandbox.
 
+import KeyboardShortcuts
 import SwiftUI
 
 struct ShortcutSettingsView: View {
@@ -28,7 +30,7 @@ struct ShortcutSettingsView: View {
             Text("Keyboard Shortcuts")
                 .font(.headline)
 
-            Text("These global shortcuts work from any application. Click the pencil icon to change a shortcut. Press the same key twice quickly to record a double-tap sequence.")
+            Text("These global shortcuts work from any application. Click the recorder field to change a shortcut.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -46,12 +48,7 @@ struct ShortcutSettingsView: View {
 
                         Spacer()
 
-                        ShortcutRecorderView(
-                            shortcut: $viewModel.settings.promptShortcut,
-                            onSave: { newShortcut in
-                                viewModel.updatePromptShortcut(newShortcut)
-                            }
-                        )
+                        KeyboardShortcuts.Recorder(for: .textPrompt)
                     }
                 }
 
@@ -67,41 +64,16 @@ struct ShortcutSettingsView: View {
 
                         Spacer()
 
-                        ShortcutRecorderView(
-                            shortcut: $viewModel.settings.screenshotShortcut,
-                            onSave: { newShortcut in
-                                viewModel.updateScreenshotShortcut(newShortcut)
-                            }
-                        )
+                        KeyboardShortcuts.Recorder(for: .screenshotCapture)
                     }
                 }
             }
             .formStyle(.grouped)
 
-            // Permission status
+            // Permission status — only Screen Recording needed now
             VStack(alignment: .leading, spacing: 8) {
                 Text("Permissions")
                     .font(.subheadline.bold())
-
-                HStack {
-                    Image(
-                        systemName: HotkeyService.checkAccessibilityPermission()
-                            ? "checkmark.circle.fill" : "xmark.circle.fill"
-                    )
-                    .foregroundStyle(
-                        HotkeyService.checkAccessibilityPermission() ? .green : .red
-                    )
-
-                    Text("Accessibility")
-                    Spacer()
-
-                    if !HotkeyService.checkAccessibilityPermission() {
-                        Button("Grant Access") {
-                            HotkeyService.requestAccessibilityPermission()
-                        }
-                        .font(.caption)
-                    }
-                }
 
                 HStack {
                     Image(

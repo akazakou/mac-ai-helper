@@ -5,14 +5,16 @@ A native macOS menu bar utility that captures selected text or screenshots via g
 ## Features
 
 - **Menu Bar Only** — Lives exclusively in the macOS menu bar (no Dock icon)
-- **Global Shortcuts** — Trigger from any application
-  - `⌘C + C` (hold CMD, press C twice) — Capture selected text and show prompt popup
-  - `⇧⌘C` — Capture a screenshot region and show prompt popup
+- **Global Shortcuts** — Trigger from any application (sandbox-compatible via Carbon hotkeys)
+  - `⇧⌘C` (`Cmd+Shift+C`) — Capture selected text and show prompt popup
+  - `⌃⌘C` (`Ctrl+Cmd+C`) — Capture a screenshot region and show prompt popup
 - **Multiple AI Providers** — Supports OpenAI, Anthropic (Claude), and Google Gemini
 - **Dynamic Model Listing** — Fetches available models from each provider's API
 - **Custom Prompts** — Configure unlimited AI prompt templates
 - **Secure Key Storage** — API keys stored in macOS Keychain
 - **Native UI** — Built with SwiftUI, uses floating panels for the popup
+- **Tip Jar** — Optional in-app purchases to support development (StoreKit 2)
+- **App Sandbox** — Fully sandboxed for Mac App Store distribution
 
 ## Requirements
 
@@ -41,7 +43,7 @@ make help
 
 ## Release & Packaging
 
-The project uses a `Makefile` to automate building, signing, and packaging for distribution outside the App Store.
+The project uses a `Makefile` to automate building, signing, and packaging.
 
 ### Build Targets
 
@@ -52,18 +54,24 @@ The project uses a `Makefile` to automate building, signing, and packaging for d
 | `make app`     | Build Universal Binary .app bundle (ad-hoc signed)     |
 | `make release` | Full ad-hoc pipeline: clean → build → sign → pkg + dmg |
 
-**Distribution (Apple Developer signed):**
+**Developer ID Distribution (outside App Store):**
 
 | Target                | Description                                                         |
 | --------------------- | ------------------------------------------------------------------- |
 | `make release-signed` | Full pipeline: clean → build → sign → notarize → staple → pkg + dmg |
 | `make sign`           | Code sign the .app bundle                                           |
 | `make notarize`       | Submit .app to Apple for notarization                               |
-| `make notarize-dmg`   | Submit .dmg to Apple for notarization                               |
-| `make staple`         | Staple notarization ticket to .app                                  |
-| `make staple-dmg`     | Staple notarization ticket to .dmg                                  |
 | `make pkg`            | Create .pkg installer (signed if identity provided)                 |
 | `make dmg`            | Create .dmg disk image                                              |
+
+**Mac App Store Distribution:**
+
+| Target                  | Description                                    |
+| ----------------------- | ---------------------------------------------- |
+| `make appstore`         | Full pipeline: clean → icon → archive → upload |
+| `make appstore-icon`    | Generate 1024×1024 App Store icon PNG from SVG |
+| `make appstore-archive` | Create Xcode archive for App Store submission  |
+| `make appstore-upload`  | Export archive and upload to App Store Connect |
 
 **Utilities:**
 
@@ -87,15 +95,33 @@ make release
 make release APP_VERSION=2.0.0
 ```
 
-### Apple Developer Build (Distribution)
-
-For distributing outside the App Store with full Gatekeeper trust, you need an [Apple Developer account](https://developer.apple.com) ($99/year).
+### Mac App Store Submission
 
 **Prerequisites:**
 
-1. A **Developer ID Application** certificate installed in your keychain
-2. A **Developer ID Installer** certificate installed in your keychain
-3. An [app-specific password](https://appleid.apple.com) for notarization
+1. An [Apple Developer Program](https://developer.apple.com/programs/) membership
+2. **Mac App Distribution** + **Mac Installer Distribution** certificates
+3. App ID registered with bundle ID `com.castloud.MacAIHelper`
+4. App Store provisioning profile
+5. App listing created in [App Store Connect](https://appstoreconnect.apple.com)
+
+**Update Team ID in ExportOptions.plist:**
+
+Edit `SupportFiles/ExportOptions.plist` and replace `REPLACE_WITH_YOUR_TEAM_ID` with your actual Team ID.
+
+**Submit to App Store:**
+
+```bash
+make appstore
+```
+
+**Test StoreKit locally:**
+
+The project includes a StoreKit configuration file at `SupportFiles/StoreKitConfiguration.storekit` for local testing of in-app purchases without needing App Store Connect sandbox.
+
+### Apple Developer Build (Direct Distribution)
+
+For distributing outside the App Store with full Gatekeeper trust:
 
 **One-time setup — store notarization credentials in keychain:**
 
@@ -114,12 +140,6 @@ make release-signed \
   APP_PASSWORD="@keychain:notarytool"
 ```
 
-**Check available signing identities:**
-
-```bash
-make check-identity
-```
-
 ### Output Artifacts
 
 After `make release` or `make release-signed`, the following are produced in `build/`:
@@ -128,15 +148,12 @@ After `make release` or `make release-signed`, the following are produced in `bu
 - `build/MacAIHelper-X.Y.Z.pkg` — macOS installer package (installs to /Applications)
 - `build/MacAIHelper-X.Y.Z.dmg` — Disk image with drag-to-install
 
-With `make release-signed`, all artifacts are Developer ID signed, Apple notarized, and have stapled tickets — ready for download distribution.
-
 ## Setup
 
 1. **Launch the app** — It will appear as an icon in the menu bar
-2. **Grant Accessibility permission** — Required for global keyboard shortcuts. The app will prompt you on first launch.
-3. **Add API keys** — Open Settings (click menu bar icon → Settings) → API Keys tab → Add keys for your preferred providers
-4. **Configure prompts** — Settings → Prompts tab to add, edit, or reorder prompts
-5. **Start using** — Select text in any app, press `⌘C + C`, pick a prompt, and get AI responses!
+2. **Add API keys** — Open Settings (click menu bar icon → Settings) → API Keys tab → Add keys for your preferred providers
+3. **Configure prompts** — Settings → Prompts tab to add, edit, or reorder prompts
+4. **Start using** — Select text in any app, press `⇧⌘C`, pick a prompt, and get AI responses!
 
 ## Architecture
 
@@ -147,24 +164,35 @@ Sources/MacAIHelper/
 ├── Services/               # Business logic (AI APIs, Keychain, Hotkeys, etc.)
 ├── ViewModels/             # Observable state management
 ├── Views/                  # SwiftUI views (Settings, Popup, Result)
-└── Resources/              # Info.plist, Entitlements
+└── Resources/              # Menu bar icon
 ```
 
 ### Key Components
 
-- **HotkeyService** — CGEvent tap for global shortcut detection
+- **HotkeyService** — Global shortcuts via KeyboardShortcuts (Carbon RegisterEventHotKey)
 - **AIServiceRouter** — Routes requests to OpenAI, Anthropic, or Gemini
 - **KeychainService** — Secure API key storage
 - **FloatingPanelController** — NSPanel-based floating popup window
-- **ScreenCaptureService** — Interactive screen region capture
+- **ScreenCaptureService** — Interactive screen region capture via ScreenCaptureKit
+- **TipJarService** — StoreKit 2 consumable in-app purchases
 
 ## Permissions
 
-The app requires two macOS permissions:
+The app requires one macOS permission:
 
-- **Accessibility** — For monitoring global keyboard shortcuts via CGEvent tap
 - **Screen Recording** — For capturing screenshot regions (only needed for the screenshot feature)
+
+Note: Global keyboard shortcuts use Carbon APIs and do **not** require Accessibility permission.
+
+## Privacy
+
+Privacy policy: [www.castloud.com/privacy.html](https://www.castloud.com/privacy.html)
+
+- No data collected or transmitted to Castloud servers
+- API keys stored locally in macOS Keychain
+- Content sent directly to user-configured AI providers
+- No analytics or tracking
 
 ## License
 
-Private project.
+Private project. © 2026 Castloud.

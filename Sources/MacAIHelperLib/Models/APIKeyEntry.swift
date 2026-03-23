@@ -4,14 +4,14 @@
 
 import Foundation
 
-struct APIKeyEntry: Identifiable, Codable, Hashable, Sendable {
-    let id: UUID
+public struct APIKeyEntry: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
     /// The AI provider this key belongs to
-    let provider: AIProvider
+    public let provider: AIProvider
     /// User-friendly label for display
-    var label: String
+    public var label: String
 
-    init(id: UUID = UUID(), provider: AIProvider, label: String = "") {
+    public init(id: UUID = UUID(), provider: AIProvider, label: String = "") {
         self.id = id
         self.provider = provider
         self.label = label.isEmpty ? provider.rawValue : label

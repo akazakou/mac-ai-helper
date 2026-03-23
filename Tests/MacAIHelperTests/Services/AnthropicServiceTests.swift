@@ -4,7 +4,7 @@
 import Foundation
 import Testing
 
-@testable import MacAIHelper
+@testable import MacAIHelperLib
 
 @Suite("AnthropicService Tests")
 struct AnthropicServiceTests {
