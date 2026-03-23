@@ -2,6 +2,7 @@
 // Manages app lifecycle, initializes services, and handles hotkey callbacks.
 
 import AppKit
+import os
 import SwiftUI
 
 /// Identifies each tab in the Settings window for programmatic navigation
@@ -32,6 +33,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var tipJarWindow: NSWindow?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        Log.general.info("Application did finish launching")
         Self.shared = self
 
         // Ensure the app doesn't appear in the Dock
@@ -46,6 +48,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // If no API keys are configured, open settings on the API Keys tab
         if !appState.hasAPIKeys {
+            Log.general.info("No API keys configured — opening settings on API Keys tab")
             // Small delay to let the menu bar finish initializing
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 self?.openSettings(tab: .apiKeys)
@@ -54,6 +57,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     public func applicationWillTerminate(_ notification: Notification) {
+        Log.general.info("Application will terminate")
         hotkeyService?.stopMonitoring()
     }
 
@@ -61,19 +65,23 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Opens the settings window on a specific tab, creating it if necessary.
     public func openSettings(tab: SettingsTab? = nil) {
+        Log.ui.info("openSettings called with tab: \(String(describing: tab))")
         if let tab {
             appState.selectedSettingsTab = tab
         }
 
         if let window = settingsWindow, window.isVisible {
+            Log.ui.debug("Settings window already visible, bringing to front")
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
+        Log.ui.debug("Creating new settings window")
         let settingsView = SettingsView()
             .environment(appState)
 
+        Log.ui.debug("Creating NSHostingView for settings")
         let hostingView = NSHostingView(rootView: settingsView)
 
         let window = NSWindow(
@@ -175,9 +183,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 appState.capturedText = nil
                 showPromptPopup()
             } catch AppError.screenCaptureCancelled {
-                // User pressed ESC — silently ignore
+                Log.capture.debug("Screenshot capture cancelled by user")
             } catch {
-                print("⚠️ Screenshot capture failed: \(error)")
+                Log.capture.error("Screenshot capture failed: \(error.localizedDescription)")
                 appState.lastError = error.localizedDescription
             }
         }
@@ -257,6 +265,7 @@ public final class AppState {
         do {
             try settingsService.saveSettings(settings)
         } catch {
+            Log.settings.error("Failed to save settings: \(error.localizedDescription)")
             lastError = "Failed to save settings: \(error.localizedDescription)"
         }
     }
@@ -286,7 +295,7 @@ public final class AppState {
                 )
                 allModels.append(contentsOf: models)
             } catch {
-                print("⚠️ Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)")
+                Log.ai.error("Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)")
             }
         }
 

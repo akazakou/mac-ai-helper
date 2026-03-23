@@ -58,7 +58,7 @@ final class TipJarService {
             let storeProducts = try await Product.products(for: Self.productIDs)
             products = storeProducts.sorted { $0.price < $1.price }
         } catch {
-            print("⚠️ Failed to load tip products: \(error.localizedDescription)")
+            Log.tipjar.error("Failed to load tip products: \(error.localizedDescription)")
             products = []
         }
     }
@@ -120,7 +120,7 @@ final class TipJarService {
                     }
                     await transaction.finish()
                 } catch {
-                    print("⚠️ Transaction verification failed: \(error.localizedDescription)")
+                    Log.tipjar.error("Transaction verification failed: \(error.localizedDescription)")
                 }
             }
         }

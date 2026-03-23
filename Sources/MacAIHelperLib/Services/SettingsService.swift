@@ -39,7 +39,7 @@ struct SettingsService: Sendable {
             return try decoder.decode(AppSettings.self, from: data)
         } catch {
             // If file is corrupt, return defaults rather than crashing
-            print("⚠️ Failed to load settings: \(error.localizedDescription). Using defaults.")
+            Log.settings.error("Failed to load settings: \(error.localizedDescription). Using defaults.")
             return .defaultSettings
         }
     }

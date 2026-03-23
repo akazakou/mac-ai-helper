@@ -135,7 +135,7 @@ struct KeychainService: Sendable {
         do {
             return try readStore()
         } catch {
-            print("⚠️ Failed to read key store: \(error.localizedDescription)")
+            Log.keychain.error("Failed to read key store: \(error.localizedDescription)")
             return [:]
         }
     }

@@ -5,6 +5,7 @@
 // works inside App Sandbox.
 
 import KeyboardShortcuts
+import os
 import SwiftUI
 
 struct ShortcutSettingsView: View {
@@ -14,7 +15,9 @@ struct ShortcutSettingsView: View {
     @State private var hasScreenCapturePermission = false
 
     var body: some View {
+        let _ = Log.ui.debug("ShortcutSettingsView body evaluation started")
         VStack(alignment: .leading, spacing: 16) {
+            let _ = Log.ui.debug("ShortcutSettingsView: rendering General section")
             // General section
             Text("General")
                 .font(.headline)
@@ -27,6 +30,7 @@ struct ShortcutSettingsView: View {
 
             Divider()
 
+            let _ = Log.ui.debug("ShortcutSettingsView: rendering Keyboard Shortcuts header")
             Text("Keyboard Shortcuts")
                 .font(.headline)
 
@@ -34,6 +38,7 @@ struct ShortcutSettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            let _ = Log.ui.debug("ShortcutSettingsView: about to create Form with KeyboardShortcuts.Recorder")
             // Shortcuts editor
             Form {
                 Section("Text Prompt") {
@@ -48,6 +53,7 @@ struct ShortcutSettingsView: View {
 
                         Spacer()
 
+                        let _ = Log.ui.debug("ShortcutSettingsView: creating textPrompt Recorder")
                         KeyboardShortcuts.Recorder(for: .textPrompt)
                     }
                 }
@@ -64,28 +70,37 @@ struct ShortcutSettingsView: View {
 
                         Spacer()
 
+                        let _ = Log.ui.debug("ShortcutSettingsView: creating screenshotCapture Recorder")
                         KeyboardShortcuts.Recorder(for: .screenshotCapture)
                     }
                 }
             }
             .formStyle(.grouped)
 
+            let _ = Log.ui.debug("ShortcutSettingsView: rendering Permissions section")
             // Permission status — only Screen Recording needed now
+            let _ = Log.ui.debug("ShortcutSettingsView: Permissions — creating VStack")
             VStack(alignment: .leading, spacing: 8) {
+                let _ = Log.ui.debug("ShortcutSettingsView: Permissions — inside VStack")
                 Text("Permissions")
                     .font(.subheadline.bold())
 
+                let _ = Log.ui.debug("ShortcutSettingsView: Permissions — creating HStack with image/text")
                 HStack {
+                    let _ = Log.ui.debug("ShortcutSettingsView: Permissions — creating permission icon, hasPermission=\(hasScreenCapturePermission)")
                     Image(
                         systemName: hasScreenCapturePermission
                             ? "checkmark.circle.fill" : "xmark.circle.fill"
                     )
                     .foregroundStyle(hasScreenCapturePermission ? .green : .red)
 
+                    let _ = Log.ui.debug("ShortcutSettingsView: Permissions — creating Screen Recording text")
                     Text("Screen Recording")
                     Spacer()
 
+                    let _ = Log.ui.debug("ShortcutSettingsView: Permissions — checking if button needed")
                     if !hasScreenCapturePermission {
+                        let _ = Log.ui.debug("ShortcutSettingsView: Permissions — creating Open Settings button")
                         Button("Open Settings") {
                             NSWorkspace.shared.open(
                                 URL(
@@ -95,17 +110,23 @@ struct ShortcutSettingsView: View {
                         }
                         .font(.caption)
                     }
+                    let _ = Log.ui.debug("ShortcutSettingsView: Permissions — HStack content complete")
                 }
+                let _ = Log.ui.debug("ShortcutSettingsView: Permissions — VStack content complete")
             }
             .padding()
             .background(.background.secondary)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
+            let _ = Log.ui.debug("ShortcutSettingsView: Permissions section modifiers applied")
+            let _ = Log.ui.debug("ShortcutSettingsView: body construction complete")
             Spacer()
         }
         .padding()
         .task {
+            Log.ui.debug("ShortcutSettingsView: .task started — checking screen capture permission")
             hasScreenCapturePermission = await ScreenCaptureService.checkPermission()
+            Log.ui.debug("ShortcutSettingsView: .task completed — permission=\(hasScreenCapturePermission)")
         }
     }
 }

@@ -59,15 +59,13 @@ struct ScreenCaptureService: Sendable {
     }
 
     /// Checks if screen recording permission has been granted.
+    /// Uses CGPreflightScreenCaptureAccess which is safe inside App Sandbox
+    /// (unlike SCShareableContent which can crash via XPC in sandboxed apps).
     static func checkPermission() async -> Bool {
-        do {
-            _ = try await SCShareableContent.excludingDesktopWindows(
-                false, onScreenWindowsOnly: true
-            )
-            return true
-        } catch {
-            return false
-        }
+        Log.capture.debug("Checking screen capture permission via CGPreflightScreenCaptureAccess")
+        let granted = CGPreflightScreenCaptureAccess()
+        Log.capture.info("Screen capture permission: \(granted ? "granted" : "denied")")
+        return granted
     }
 
     /// Shows an alert explaining that Screen Recording permission is needed.

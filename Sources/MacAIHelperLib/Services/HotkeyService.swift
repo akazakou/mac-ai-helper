@@ -4,6 +4,7 @@
 // which works inside App Sandbox without Accessibility permission.
 
 import KeyboardShortcuts
+import os
 
 @MainActor
 final class HotkeyService {
@@ -17,6 +18,7 @@ final class HotkeyService {
 
     /// Registers global keyboard shortcut handlers.
     func startMonitoring() {
+        Log.hotkey.info("Starting global hotkey monitoring")
         KeyboardShortcuts.onKeyUp(for: .textPrompt) { [weak self] in
             Task { @MainActor in
                 self?.onTextShortcut?()
