@@ -15,12 +15,14 @@ A native macOS menu bar utility that captures selected text or screenshots via g
 - **Native UI** — Built with SwiftUI, uses floating panels for the popup
 - **Tip Jar** — Optional in-app purchases to support development (StoreKit 2)
 - **App Sandbox** — Fully sandboxed for Mac App Store distribution
+- **Persistent Settings** — Settings, API keys, and prompts persist across App Store updates
 
 ## Requirements
 
 - macOS 14+ (Sonoma) — Apple Silicon and Intel
 - Swift 6.0+
 - Xcode 16+ (for building)
+- Apple Developer Program membership (for signing and distribution)
 
 ## Building
 
@@ -34,8 +36,8 @@ swift run MacAIHelper
 # Build Universal .app bundle (arm64 + x86_64)
 make app
 
-# Full release pipeline: build → sign → .pkg + .dmg
-make release
+# Build, sign, and launch locally for testing
+make dev
 
 # See all available targets
 make help
@@ -43,57 +45,38 @@ make help
 
 ## Release & Packaging
 
-The project uses a `Makefile` to automate building, signing, and packaging.
+The project uses a `Makefile` to automate building, signing, and packaging. All builds are signed with App Store certificates to ensure consistent sandbox container and Keychain access across builds.
 
 ### Build Targets
 
-**Development (ad-hoc signed):**
+**Development:**
 
-| Target         | Description                                            |
-| -------------- | ------------------------------------------------------ |
-| `make app`     | Build Universal Binary .app bundle (ad-hoc signed)     |
-| `make release` | Full ad-hoc pipeline: clean → build → sign → pkg + dmg |
-
-**Developer ID Distribution (outside App Store):**
-
-| Target                | Description                                                         |
-| --------------------- | ------------------------------------------------------------------- |
-| `make release-signed` | Full pipeline: clean → build → sign → notarize → staple → pkg + dmg |
-| `make sign`           | Code sign the .app bundle                                           |
-| `make notarize`       | Submit .app to Apple for notarization                               |
-| `make pkg`            | Create .pkg installer (signed if identity provided)                 |
-| `make dmg`            | Create .dmg disk image                                              |
+| Target     | Description                                         |
+| ---------- | --------------------------------------------------- |
+| `make dev` | Build, sign with App Store cert, and launch locally |
+| `make app` | Build Universal Binary .app bundle                  |
 
 **Mac App Store Distribution:**
 
-| Target                  | Description                                    |
-| ----------------------- | ---------------------------------------------- |
-| `make appstore`         | Full pipeline: clean → icon → archive → upload |
-| `make appstore-icon`    | Generate 1024×1024 App Store icon PNG from SVG |
-| `make appstore-archive` | Create Xcode archive for App Store submission  |
-| `make appstore-upload`  | Export archive and upload to App Store Connect |
+| Target                 | Description                                    |
+| ---------------------- | ---------------------------------------------- |
+| `make appstore`        | Full pipeline: clean → icon → sign → pkg       |
+| `make appstore-icon`   | Generate 1024×1024 App Store icon PNG from SVG |
+| `make appstore-sign`   | Sign .app with App Store certificate           |
+| `make appstore-pkg`    | Create signed .pkg for App Store submission    |
+| `make appstore-upload` | Upload .pkg to App Store Connect               |
 
 **Utilities:**
 
-| Target                   | Description                                |
-| ------------------------ | ------------------------------------------ |
-| `make build-arm64`       | Build release for Apple Silicon only       |
-| `make build-x86_64`      | Build release for Intel only               |
-| `make universal-binary`  | Create Universal Binary via lipo           |
-| `make icon`              | Generate AppIcon.icns from SVG             |
-| `make check-identity`    | Verify signing identities are in keychain  |
-| `make store-credentials` | Store notarization credentials in keychain |
-| `make clean`             | Remove all build artifacts                 |
-
-### Ad-hoc Build (Local Testing)
-
-```bash
-# Build with ad-hoc signing (no Apple Developer account needed)
-make release
-
-# Override version
-make release APP_VERSION=2.0.0
-```
+| Target                   | Description                               |
+| ------------------------ | ----------------------------------------- |
+| `make build-arm64`       | Build release for Apple Silicon only      |
+| `make build-x86_64`      | Build release for Intel only              |
+| `make universal-binary`  | Create Universal Binary via lipo          |
+| `make icon`              | Generate AppIcon.icns from SVG            |
+| `make check-identity`    | Verify signing identities are in keychain |
+| `make store-credentials` | Store credentials in keychain             |
+| `make clean`             | Remove all build artifacts                |
 
 ### Mac App Store Submission
 
@@ -105,48 +88,29 @@ make release APP_VERSION=2.0.0
 4. App Store provisioning profile
 5. App listing created in [App Store Connect](https://appstoreconnect.apple.com)
 
-**Update Team ID in ExportOptions.plist:**
-
-Edit `SupportFiles/ExportOptions.plist` and replace `REPLACE_WITH_YOUR_TEAM_ID` with your actual Team ID.
-
 **Submit to App Store:**
 
 ```bash
 make appstore
 ```
 
+Then upload via Transporter.app or:
+
+```bash
+make appstore-upload APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+```
+
 **Test StoreKit locally:**
 
 The project includes a StoreKit configuration file at `SupportFiles/StoreKitConfiguration.storekit` for local testing of in-app purchases without needing App Store Connect sandbox.
 
-### Apple Developer Build (Direct Distribution)
-
-For distributing outside the App Store with full Gatekeeper trust:
-
-**One-time setup — store notarization credentials in keychain:**
-
-```bash
-make store-credentials APPLE_ID="you@example.com" TEAM_ID="XXXXXXXXXX"
-```
-
-**Full signed + notarized release:**
-
-```bash
-make release-signed \
-  SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
-  INSTALLER_SIGNING_IDENTITY="Developer ID Installer: Your Name (TEAMID)" \
-  APPLE_ID="you@example.com" \
-  TEAM_ID="XXXXXXXXXX" \
-  APP_PASSWORD="@keychain:notarytool"
-```
-
 ### Output Artifacts
 
-After `make release` or `make release-signed`, the following are produced in `build/`:
+After `make appstore`, the following are produced in `build/`:
 
 - `build/release/MacAIHelper.app` — Signed Universal Binary application
-- `build/MacAIHelper-X.Y.Z.pkg` — macOS installer package (installs to /Applications)
-- `build/MacAIHelper-X.Y.Z.dmg` — Disk image with drag-to-install
+- `build/MacAIHelper-X.Y.Z-appstore.pkg` — Signed .pkg for App Store submission
+- `build/AppStoreIcon.png` — 1024×1024 App Store icon
 
 ## Setup
 
@@ -159,22 +123,30 @@ After `make release` or `make release-signed`, the following are produced in `bu
 
 ```
 Sources/MacAIHelper/
-├── App/                    # App entry point, delegate, floating panel
+├── App/                    # App entry point (@main)
+Sources/MacAIHelperLib/
+├── App/                    # AppDelegate, FloatingPanelController, AppState
 ├── Models/                 # Data models (AIProvider, Prompt, AppSettings, etc.)
 ├── Services/               # Business logic (AI APIs, Keychain, Hotkeys, etc.)
 ├── ViewModels/             # Observable state management
-├── Views/                  # SwiftUI views (Settings, Popup, Result)
-└── Resources/              # Menu bar icon
+└── Views/                  # SwiftUI views (Settings, Popup, Result)
 ```
 
 ### Key Components
 
 - **HotkeyService** — Global shortcuts via KeyboardShortcuts (Carbon RegisterEventHotKey)
 - **AIServiceRouter** — Routes requests to OpenAI, Anthropic, or Gemini
-- **KeychainService** — Secure API key storage
+- **KeychainService** — Secure API key storage in macOS Keychain
+- **SettingsService** — JSON-based settings persistence in Application Support
 - **FloatingPanelController** — NSPanel-based floating popup window
 - **ScreenCaptureService** — Interactive screen region capture via ScreenCaptureKit
 - **TipJarService** — StoreKit 2 consumable in-app purchases
+
+### Data Persistence
+
+- **Settings** (`settings.json`) — Stored in the sandboxed Application Support directory. Persists across App Store updates because the sandbox container is tied to the bundle ID and team signing identity.
+- **API Keys** — Stored in macOS Keychain, scoped to the app's code signing identity. Persists across updates as long as builds are signed with the same team certificate.
+- **Keyboard Shortcuts** — Managed by the KeyboardShortcuts framework via UserDefaults.
 
 ## Permissions
 

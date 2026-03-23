@@ -2,23 +2,17 @@
 # Mac AI Helper — Build & Packaging Makefile
 # ==============================================================================
 # Usage:
-#   make dev                  — Build + launch locally (ad-hoc signed, sandbox)
-#   make dev-signed           — Build + launch with App Store certs (local test)
-#   make release              — Ad-hoc: clean → build → app → sign → pkg + dmg
-#   make release-signed       — Developer ID: clean → build → sign → notarize → staple → pkg + dmg
+#   make dev                  — Build + launch locally (App Store signed)
 #   make appstore             — Full App Store pipeline: build → sign → pkg → upload
+#   make appstore-sign        — Sign .app with App Store certificate
+#   make appstore-pkg         — Create signed .pkg for App Store
+#   make appstore-upload      — Upload .pkg to App Store Connect
 #   make app                  — Build Universal .app bundle only
-#   make pkg                  — Create .pkg installer
-#   make dmg                  — Create .dmg disk image
 #   make clean                — Remove all build artifacts
 #
-# Variables (ad-hoc):
+# Variables:
 #   APP_VERSION               — Override version string (reads from Info.plist by default)
-#
-# Variables (Apple Developer — required for release-signed):
-#   SIGNING_IDENTITY          — "Developer ID Application: Your Name (TEAMID)"
-#   INSTALLER_SIGNING_IDENTITY — "Developer ID Installer: Your Name (TEAMID)"
-#   APPLE_ID                  — Apple ID email for notarization
+#   APPLE_ID                  — Apple ID email for App Store uploads
 #   TEAM_ID                   — Apple Developer Team ID
 #   APP_PASSWORD              — App-specific password (or @keychain:notarytool)
 # ==============================================================================
@@ -34,11 +28,6 @@ TEAM_ID            ?= T2MHQ9ZQXG
 APPLE_ID           ?= a.v.kazakou@gmail.com
 APP_PASSWORD       ?= @keychain:notarytool
 
-# Signing identities: use "-" for ad-hoc, or set to your Developer ID / App Store identity
-# For ad-hoc local testing:
-SIGNING_IDENTITY            ?= -
-INSTALLER_SIGNING_IDENTITY  ?= $(SIGNING_IDENTITY)
-
 # App Store signing identities (3rd Party Mac Developer)
 APPSTORE_APP_IDENTITY       := 3rd Party Mac Developer Application: KAZAKOVA SOFTWARE CONSULTING LLC ($(TEAM_ID))
 APPSTORE_INSTALLER_IDENTITY := 3rd Party Mac Developer Installer: KAZAKOVA SOFTWARE CONSULTING LLC ($(TEAM_ID))
@@ -50,7 +39,6 @@ PROVISIONING_PROFILE := certs/MacAIHelper_AppStore_Distribution.provisionprofile
 BUILD_DIR          := build
 RELEASE_DIR        := $(BUILD_DIR)/release
 PKG_DIR            := $(BUILD_DIR)/pkg
-DMG_DIR            := $(BUILD_DIR)/dmg
 ICONSET_DIR        := $(BUILD_DIR)/AppIcon.iconset
 
 # App bundle paths
@@ -62,7 +50,6 @@ APP_RESOURCES      := $(APP_CONTENTS)/Resources
 # Source files
 INFO_PLIST         := SupportFiles/Info.plist
 ENTITLEMENTS       := SupportFiles/MacAIHelper.entitlements
-ENTITLEMENTS_ADHOC := SupportFiles/MacAIHelper-adhoc.entitlements
 ICON_SVG           := SupportFiles/icon.svg
 DISTRIBUTION_XML   := SupportFiles/distribution.xml
 EXPORT_OPTIONS     := SupportFiles/ExportOptions.plist
@@ -80,16 +67,14 @@ APP_VERSION        ?= $(shell /usr/libexec/PlistBuddy -c "Print :CFBundleShortVe
 BUILD_NUMBER       ?= $(shell /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" $(INFO_PLIST) 2>/dev/null || echo "1")
 
 # Output artifacts
-PKG_OUTPUT         := $(BUILD_DIR)/$(APP_NAME)-$(APP_VERSION).pkg
-DMG_OUTPUT         := $(BUILD_DIR)/$(APP_NAME)-$(APP_VERSION).dmg
-ICNS_OUTPUT        := $(BUILD_DIR)/AppIcon.icns
 APPSTORE_PKG       := $(BUILD_DIR)/$(APP_NAME)-$(APP_VERSION)-appstore.pkg
+ICNS_OUTPUT        := $(BUILD_DIR)/AppIcon.icns
 
 # --- Phony targets -----------------------------------------------------------
 
-.PHONY: all release release-signed app sign pkg dmg clean build-arm64 build-x86_64 \
-        universal-binary icon app-bundle notarize notarize-dmg staple staple-dmg \
-        check-identity check-notarize-credentials help dev dev-signed \
+.PHONY: all app clean build-arm64 build-x86_64 \
+        universal-binary icon app-bundle embed-profile \
+        check-identity help dev \
         appstore-icon appstore appstore-sign appstore-pkg appstore-upload \
         store-credentials
 
@@ -107,24 +92,15 @@ help:
 	@echo ""
 	@echo "  Local Development:"
 	@echo "  ──────────────────"
-	@echo "  make dev               Build & launch locally (ad-hoc signed, sandbox)"
-	@echo "  make dev-signed        Build & launch with App Store certs (local test)"
+	@echo "  make dev               Build & launch locally (App Store signed)"
 	@echo ""
-	@echo "  Development (ad-hoc signed):"
-	@echo "  ─────────────────────────────"
-	@echo "  make app               Build Universal .app bundle (ad-hoc signed)"
-	@echo "  make release           Full ad-hoc pipeline: clean → app → sign → pkg + dmg"
-	@echo ""
-	@echo "  Distribution (Apple Developer signed):"
-	@echo "  ────────────────────────────────────────"
-	@echo "  make release-signed    Full pipeline: clean → app → sign → notarize → staple → pkg + dmg"
-	@echo "  make sign              Code sign the .app bundle"
-	@echo "  make notarize          Submit .app to Apple for notarization"
-	@echo "  make notarize-dmg      Submit .dmg to Apple for notarization"
-	@echo "  make staple            Staple notarization ticket to .app"
-	@echo "  make staple-dmg        Staple notarization ticket to .dmg"
-	@echo "  make pkg               Create .pkg installer"
-	@echo "  make dmg               Create .dmg disk image"
+	@echo "  Build:"
+	@echo "  ──────"
+	@echo "  make app               Build Universal .app bundle"
+	@echo "  make build-arm64       Build release binary for Apple Silicon"
+	@echo "  make build-x86_64      Build release binary for Intel"
+	@echo "  make universal-binary  Combine into Universal Binary"
+	@echo "  make icon              Generate AppIcon.icns from SVG"
 	@echo ""
 	@echo "  Mac App Store:"
 	@echo "  ───────────────"
@@ -136,17 +112,12 @@ help:
 	@echo ""
 	@echo "  Utilities:"
 	@echo "  ──────────"
-	@echo "  make build-arm64       Build release binary for Apple Silicon"
-	@echo "  make build-x86_64      Build release binary for Intel"
-	@echo "  make universal-binary  Combine into Universal Binary"
-	@echo "  make icon              Generate AppIcon.icns from SVG"
 	@echo "  make check-identity    Verify signing identities are available"
+	@echo "  make store-credentials Store notarization credentials in keychain"
 	@echo "  make clean             Remove all build artifacts"
 	@echo ""
 	@echo "Variables:"
 	@echo "  APP_VERSION                   Override version (default: from Info.plist)"
-	@echo "  SIGNING_IDENTITY              Developer ID Application certificate name"
-	@echo "  INSTALLER_SIGNING_IDENTITY    Developer ID Installer certificate name"
 	@echo "  APPLE_ID                      Apple ID email (default: a.v.kazakou@gmail.com)"
 	@echo "  TEAM_ID                       Apple Developer Team ID (default: T2MHQ9ZQXG)"
 	@echo "  APP_PASSWORD                  App-specific password or @keychain:notarytool"
@@ -161,57 +132,18 @@ check-identity:
 	@security find-identity -v -p codesigning || \
 		echo "  ⚠️  No code signing certificates found"
 	@echo ""
-	@echo "All signing identities:"
-	@security find-identity -v || \
-		echo "  ⚠️  No signing certificates found"
-	@echo ""
 	@echo "App Store identities:"
 	@security find-identity -v -p codesigning | grep "3rd Party Mac Developer" || \
 		echo "  ⚠️  No '3rd Party Mac Developer' certificates found"
 	@echo ""
 
-# --- Validate notarization credentials ---------------------------------------
-
-check-notarize-credentials:
-	@if [ -z "$(APPLE_ID)" ]; then \
-		echo "❌ APPLE_ID is required for notarization"; \
-		echo "   Set it via: make notarize APPLE_ID=you@example.com"; \
-		exit 1; \
-	fi
-	@if [ -z "$(TEAM_ID)" ]; then \
-		echo "❌ TEAM_ID is required for notarization"; \
-		echo "   Set it via: make notarize TEAM_ID=XXXXXXXXXX"; \
-		exit 1; \
-	fi
-	@if [ -z "$(APP_PASSWORD)" ]; then \
-		echo "❌ APP_PASSWORD is required for notarization"; \
-		echo "   Create an app-specific password at https://appleid.apple.com"; \
-		echo "   Or store in keychain: xcrun notarytool store-credentials notarytool \\"; \
-		echo "     --apple-id $(APPLE_ID) --team-id $(TEAM_ID)"; \
-		echo "   Then use: APP_PASSWORD=@keychain:notarytool"; \
-		exit 1; \
-	fi
-
 # ==============================================================================
 # LOCAL DEVELOPMENT
 # ==============================================================================
 
-# --- Build & launch locally (ad-hoc signed, sandbox enabled) ------------------
+# --- Build & launch locally (App Store signed) --------------------------------
 
-dev: clean app-bundle
-	@echo "🔏 Ad-hoc signing with sandbox entitlements..."
-	codesign --force --deep --sign "-" \
-		--entitlements $(ENTITLEMENTS_ADHOC) \
-		"$(APP_BUNDLE)"
-	@echo "✅ Ad-hoc signed"
-	@codesign --verify --verbose "$(APP_BUNDLE)"
-	@echo ""
-	@echo "🚀 Launching $(DISPLAY_NAME)..."
-	@open "$(APP_BUNDLE)"
-
-# --- Build & launch with App Store certs (local test) -------------------------
-
-dev-signed: clean app-bundle embed-profile
+dev: clean app-bundle embed-profile
 	@echo "🔏 Signing with App Store certificate..."
 	@echo "   Identity: $(APPSTORE_APP_IDENTITY)"
 	codesign --force --deep --sign "$(APPSTORE_APP_IDENTITY)" \
@@ -236,39 +168,6 @@ embed-profile:
 	@mkdir -p $(APP_CONTENTS)
 	cp "$(PROVISIONING_PROFILE)" "$(APP_CONTENTS)/embedded.provisionprofile"
 	@echo "✅ Profile embedded"
-
-# ==============================================================================
-# AD-HOC RELEASE
-# ==============================================================================
-
-# --- Full release pipeline (ad-hoc) ------------------------------------------
-
-release: clean app sign pkg dmg
-	@echo ""
-	@echo "🎉 Release $(APP_VERSION) built successfully! (ad-hoc signed)"
-	@echo "   App:        $(APP_BUNDLE)"
-	@echo "   Installer:  $(PKG_OUTPUT)"
-	@echo "   Disk Image: $(DMG_OUTPUT)"
-	@echo ""
-	@echo "⚠️  Ad-hoc signed — for distribution, use: make release-signed"
-	@echo ""
-
-# ==============================================================================
-# DEVELOPER ID RELEASE (outside App Store)
-# ==============================================================================
-
-# --- Full release pipeline (Apple Developer signed + notarized) ---------------
-
-release-signed: clean app sign notarize staple pkg dmg notarize-dmg staple-dmg
-	@echo ""
-	@echo "🎉 Release $(APP_VERSION) built, signed & notarized!"
-	@echo "   App:        $(APP_BUNDLE)"
-	@echo "   Installer:  $(PKG_OUTPUT)"
-	@echo "   Disk Image: $(DMG_OUTPUT)"
-	@echo ""
-	@echo "✅ All artifacts are Developer ID signed and Apple notarized."
-	@echo "   Ready for distribution outside the App Store."
-	@echo ""
 
 # ==============================================================================
 # BUILD
@@ -337,141 +236,6 @@ app-bundle: universal-binary icon
 
 app: app-bundle
 	@echo "✅ $(DISPLAY_NAME).app is ready at $(APP_BUNDLE)"
-
-# ==============================================================================
-# CODE SIGNING
-# ==============================================================================
-
-sign: app-bundle
-	@echo "🔏 Code signing with identity: $(SIGNING_IDENTITY)"
-	@# Sign the main app bundle (nested resources are sealed automatically)
-	@# Use --options runtime only with real Developer ID (required for notarization)
-	@# Ad-hoc signing with hardened runtime causes LaunchServices to reject the app
-	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
-		echo "  (ad-hoc signing — using minimal entitlements, no hardened runtime)"; \
-		codesign --force --deep --sign "$(SIGNING_IDENTITY)" \
-			--entitlements $(ENTITLEMENTS_ADHOC) \
-			"$(APP_BUNDLE)"; \
-	else \
-		echo "  (Developer ID signing — hardened runtime + timestamp)"; \
-		codesign --force --deep --sign "$(SIGNING_IDENTITY)" \
-			--entitlements $(ENTITLEMENTS) \
-			--options runtime \
-			--timestamp \
-			"$(APP_BUNDLE)"; \
-	fi
-	@echo "✅ Code signed"
-	@codesign --verify --verbose "$(APP_BUNDLE)"
-
-# ==============================================================================
-# NOTARIZATION (Developer ID only)
-# ==============================================================================
-
-notarize: check-notarize-credentials
-	@echo "📝 Notarizing app bundle..."
-	@# Create a ZIP for notarization submission (Apple requires ZIP or DMG)
-	@echo "  Creating ZIP for submission..."
-	ditto -c -k --keepParent "$(APP_BUNDLE)" "$(BUILD_DIR)/$(APP_NAME)-$(APP_VERSION)-notarize.zip"
-	@echo "  Submitting to Apple notary service..."
-	@if [ "$(APP_PASSWORD)" = "@keychain:notarytool" ]; then \
-		xcrun notarytool submit "$(BUILD_DIR)/$(APP_NAME)-$(APP_VERSION)-notarize.zip" \
-			--keychain-profile "notarytool" \
-			--wait; \
-	else \
-		xcrun notarytool submit "$(BUILD_DIR)/$(APP_NAME)-$(APP_VERSION)-notarize.zip" \
-			--apple-id "$(APPLE_ID)" \
-			--team-id "$(TEAM_ID)" \
-			--password "$(APP_PASSWORD)" \
-			--wait; \
-	fi
-	@rm -f "$(BUILD_DIR)/$(APP_NAME)-$(APP_VERSION)-notarize.zip"
-	@echo "✅ App notarized successfully"
-
-notarize-dmg: check-notarize-credentials
-	@echo "📝 Notarizing disk image..."
-	@echo "  Submitting DMG to Apple notary service..."
-	@if [ "$(APP_PASSWORD)" = "@keychain:notarytool" ]; then \
-		xcrun notarytool submit "$(DMG_OUTPUT)" \
-			--keychain-profile "notarytool" \
-			--wait; \
-	else \
-		xcrun notarytool submit "$(DMG_OUTPUT)" \
-			--apple-id "$(APPLE_ID)" \
-			--team-id "$(TEAM_ID)" \
-			--password "$(APP_PASSWORD)" \
-			--wait; \
-	fi
-	@echo "✅ DMG notarized successfully"
-
-staple:
-	@echo "📎 Stapling notarization ticket to app..."
-	xcrun stapler staple "$(APP_BUNDLE)"
-	@echo "✅ Ticket stapled to $(APP_BUNDLE)"
-
-staple-dmg:
-	@echo "📎 Stapling notarization ticket to DMG..."
-	xcrun stapler staple "$(DMG_OUTPUT)"
-	@echo "✅ Ticket stapled to $(DMG_OUTPUT)"
-
-# ==============================================================================
-# PACKAGING (pkg & dmg)
-# ==============================================================================
-
-pkg: sign
-	@echo "📀 Creating .pkg installer..."
-	@mkdir -p $(PKG_DIR)
-	@# Create component package
-	@if [ "$(INSTALLER_SIGNING_IDENTITY)" != "-" ]; then \
-		echo "  Signing .pkg with: $(INSTALLER_SIGNING_IDENTITY)"; \
-		pkgbuild \
-			--root $(RELEASE_DIR) \
-			--install-location /Applications \
-			--identifier $(BUNDLE_ID) \
-			--version $(APP_VERSION) \
-			$(PKG_DIR)/$(APP_NAME)-component.pkg; \
-		productbuild \
-			--distribution $(DISTRIBUTION_XML) \
-			--resources SupportFiles/installer-resources \
-			--package-path $(PKG_DIR) \
-			--version $(APP_VERSION) \
-			--sign "$(INSTALLER_SIGNING_IDENTITY)" \
-			$(PKG_OUTPUT); \
-	else \
-		echo "  (unsigned .pkg — no installer signing identity)"; \
-		pkgbuild \
-			--root $(RELEASE_DIR) \
-			--install-location /Applications \
-			--identifier $(BUNDLE_ID) \
-			--version $(APP_VERSION) \
-			$(PKG_DIR)/$(APP_NAME)-component.pkg; \
-		productbuild \
-			--distribution $(DISTRIBUTION_XML) \
-			--resources SupportFiles/installer-resources \
-			--package-path $(PKG_DIR) \
-			--version $(APP_VERSION) \
-			$(PKG_OUTPUT); \
-	fi
-	@echo "✅ Installer created: $(PKG_OUTPUT)"
-
-dmg: sign
-	@echo "💿 Creating .dmg disk image..."
-	@mkdir -p $(DMG_DIR)
-	@rm -rf $(DMG_DIR)/$(APP_NAME)
-	@mkdir -p $(DMG_DIR)/$(APP_NAME)
-	@# Copy app to staging area and strip extended attributes
-	cp -R $(APP_BUNDLE) $(DMG_DIR)/$(APP_NAME)/
-	xattr -cr $(DMG_DIR)/$(APP_NAME)/
-	@# Create Applications symlink for drag-and-drop install
-	ln -sf /Applications $(DMG_DIR)/$(APP_NAME)/Applications
-	@# Create the DMG
-	@rm -f $(DMG_OUTPUT)
-	hdiutil create \
-		-volname "$(DISPLAY_NAME)" \
-		-srcfolder $(DMG_DIR)/$(APP_NAME) \
-		-ov \
-		-format UDZO \
-		$(DMG_OUTPUT)
-	@echo "✅ Disk image created: $(DMG_OUTPUT)"
 
 # ==============================================================================
 # MAC APP STORE
@@ -576,7 +340,7 @@ appstore: clean appstore-icon appstore-pkg
 # --- Store notarization credentials in keychain (one-time setup) --------------
 
 store-credentials:
-	@echo "🔐 Storing notarization credentials in keychain..."
+	@echo "🔐 Storing credentials in keychain..."
 	@echo "   This will prompt for your Apple ID password (app-specific password)."
 	@echo ""
 	xcrun notarytool store-credentials "notarytool" \
