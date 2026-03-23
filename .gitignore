@@ -10,6 +10,8 @@ xcuserdata/
 .build-x86_64/
 build/
 DerivedData/
+# XcodeGen-generated project (regenerated from project.yml)
+MacAIHelper.xcodeproj/
 *.o
 *.dSYM
 *.ipa

@@ -22,22 +22,25 @@ A native macOS menu bar utility that captures selected text or screenshots via g
 - macOS 14+ (Sonoma) — Apple Silicon and Intel
 - Swift 6.0+
 - Xcode 16+ (for building)
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) — generates `.xcodeproj` from `project.yml` (`brew install xcodegen`)
 - Apple Developer Program membership (for signing and distribution)
 
 ## Building
 
-```bash
-# Build the project (debug, current architecture)
-swift build
+The build system uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to generate a `.xcodeproj` from `project.yml`, then builds with `xcodebuild`. This ensures SPM dependency resource bundles (e.g. KeyboardShortcuts localizations) are correctly placed inside `Contents/Resources/` in the `.app` bundle.
 
-# Run directly
-swift run MacAIHelper
+```bash
+# Install build dependency (one-time)
+brew install xcodegen
 
 # Build Universal .app bundle (arm64 + x86_64)
 make app
 
-# Build, sign, and launch locally for testing
+# Build, sign with App Store cert, and launch locally for testing
 make dev
+
+# Regenerate .xcodeproj from project.yml (done automatically by make)
+make generate-xcodeproj
 
 # See all available targets
 make help
@@ -45,7 +48,7 @@ make help
 
 ## Release & Packaging
 
-The project uses a `Makefile` to automate building, signing, and packaging. All builds are signed with App Store certificates to ensure consistent sandbox container and Keychain access across builds.
+The project uses a `Makefile` + `xcodebuild` (via XcodeGen) to automate building, signing, and packaging. The `.xcodeproj` is generated from `project.yml` at build time — it is not committed to git. All builds are signed with App Store certificates to ensure consistent sandbox container and Keychain access across builds.
 
 ### Build Targets
 
@@ -68,15 +71,13 @@ The project uses a `Makefile` to automate building, signing, and packaging. All 
 
 **Utilities:**
 
-| Target                   | Description                               |
-| ------------------------ | ----------------------------------------- |
-| `make build-arm64`       | Build release for Apple Silicon only      |
-| `make build-x86_64`      | Build release for Intel only              |
-| `make universal-binary`  | Create Universal Binary via lipo          |
-| `make icon`              | Generate AppIcon.icns from SVG            |
-| `make check-identity`    | Verify signing identities are in keychain |
-| `make store-credentials` | Store credentials in keychain             |
-| `make clean`             | Remove all build artifacts                |
+| Target                    | Description                                |
+| ------------------------- | ------------------------------------------ |
+| `make generate-xcodeproj` | Regenerate `.xcodeproj` from `project.yml` |
+| `make icon`               | Generate AppIcon.icns from SVG             |
+| `make check-identity`     | Verify signing identities are in keychain  |
+| `make store-credentials`  | Store credentials in keychain              |
+| `make clean`              | Remove all build artifacts                 |
 
 ### Mac App Store Submission
 
@@ -122,6 +123,9 @@ After `make appstore`, the following are produced in `build/`:
 ## Architecture
 
 ```
+project.yml                 # XcodeGen project spec (generates .xcodeproj)
+Package.swift               # SPM package manifest (dependency declarations)
+Makefile                    # Build, sign, and package automation
 Sources/MacAIHelper/
 ├── App/                    # App entry point (@main)
 Sources/MacAIHelperLib/
