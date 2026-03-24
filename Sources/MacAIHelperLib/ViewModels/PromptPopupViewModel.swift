@@ -57,9 +57,7 @@ final class PromptPopupViewModel {
 
     /// Executes a prompt with captured image data.
     func selectPromptWithImage(_ prompt: Prompt, imageData: Data) async {
-        let resolvedPrompt = prompt.template.replacingOccurrences(
-            of: "{text}", with: "Analyze this image."
-        )
+        let resolvedPrompt = prompt.resolved(with: "Analyze this image.")
         await executeAIRequestWithImage(prompt: resolvedPrompt, imageData: imageData)
     }
 

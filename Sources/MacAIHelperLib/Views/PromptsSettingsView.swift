@@ -38,7 +38,7 @@ struct PromptsSettingsView: View {
             Text("Prompts")
                 .font(.headline)
 
-            Text("Configure the prompts that appear when you trigger the shortcut. Use {text} as a placeholder for the captured content. Drag items to reorder.")
+            Text("Configure the prompts that appear when you trigger the shortcut. Drag items to reorder.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -144,7 +144,7 @@ private struct PromptEditorSheet: View {
         switch mode {
         case .new:
             _title = State(initialValue: "")
-            _template = State(initialValue: "{text}")
+            _template = State(initialValue: "")
             _icon = State(initialValue: "text.bubble")
         case .editing(let prompt):
             _title = State(initialValue: prompt.title)
@@ -179,6 +179,12 @@ private struct PromptEditorSheet: View {
                 IconPickerView(selectedIcon: $icon)
             }
 
+            // Hint about optional {text} placeholder
+            Text("Tip: Use {text} in your prompt to control where captured content is inserted. If omitted, captured content will be appended after your prompt automatically.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
             HStack {
                 Button("Cancel") {
                     dismiss()
@@ -196,7 +202,7 @@ private struct PromptEditorSheet: View {
             }
         }
         .padding()
-        .frame(width: 400, height: 350)
+        .frame(width: 400, height: 390)
     }
 
     private func savePrompt() {

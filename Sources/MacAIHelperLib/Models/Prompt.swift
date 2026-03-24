@@ -19,8 +19,12 @@ public struct Prompt: Identifiable, Codable, Hashable, Sendable {
         self.icon = icon
     }
 
-    /// Resolves the template by replacing {text} with actual content
+    /// Resolves the template by replacing {text} with actual content.
+    /// If {text} placeholder is not present, appends the text after the prompt separated by a divider.
     public func resolved(with text: String) -> String {
-        template.replacingOccurrences(of: "{text}", with: text)
+        if template.contains("{text}") {
+            return template.replacingOccurrences(of: "{text}", with: text)
+        }
+        return "\(template)\n---\n\(text)"
     }
 }
