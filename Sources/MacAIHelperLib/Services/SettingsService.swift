@@ -7,14 +7,24 @@ struct SettingsService: Sendable {
     /// File name for the settings JSON file
     private static let fileName = "settings.json"
 
-    /// Returns the URL for the settings file in Application Support.
+    /// Returns the URL for the settings file inside the App Group shared container.
+    /// Falls back to Application Support if the group container is unavailable.
     func settingsFileURL() -> URL {
-        let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first!
+        let appDirectory: URL
 
-        let appDirectory = appSupport.appendingPathComponent("MacAIHelper", isDirectory: true)
+        if let groupContainer = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: AppConstants.appGroupIdentifier
+        ) {
+            appDirectory = groupContainer.appendingPathComponent("Library/Application Support", isDirectory: true)
+        } else {
+            // Fallback to standard Application Support if group container is unavailable
+            Log.settings.error("App Group container unavailable, falling back to Application Support.")
+            let appSupport = FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first!
+            appDirectory = appSupport.appendingPathComponent("MacAIHelper", isDirectory: true)
+        }
 
         // Ensure the directory exists
         try? FileManager.default.createDirectory(
