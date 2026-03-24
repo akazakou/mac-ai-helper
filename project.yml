@@ -77,8 +77,6 @@ targets:
     platform: macOS
     sources:
       - path: Sources/MacAIHelper
-    resources:
-      - path: SupportFiles/menubar-icon.png
     dependencies:
       - target: MacAIHelperLib
         embed: true

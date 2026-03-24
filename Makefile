@@ -233,11 +233,6 @@ app-bundle: xcode-build icon
 	@# Ensure CFBundleIconFile is set in Info.plist
 	@/usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" $(APP_CONTENTS)/Info.plist 2>/dev/null || \
 		/usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" $(APP_CONTENTS)/Info.plist
-	@# Copy menubar icon if not already present (xcodebuild may have included it)
-	@if [ ! -f "$(APP_RESOURCES)/menubar-icon.png" ]; then \
-		cp SupportFiles/menubar-icon.png $(APP_RESOURCES)/menubar-icon.png; \
-		echo "  Copied menubar-icon.png to Resources"; \
-	fi
 	@echo "✅ App bundle assembled: $(APP_BUNDLE)"
 
 app: app-bundle
