@@ -1,39 +1,38 @@
 // SettingsView.swift
-// Main settings window with tabs for Prompts, API Keys, and Shortcuts.
+// Main settings window with tabs for Prompts, API Keys, Shortcuts, and About.
 
-import os
 import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        let _ = Log.ui.debug("SettingsView body evaluation started, current tab: \(String(describing: appState.selectedSettingsTab))")
         @Bindable var appState = appState
 
         TabView(selection: $appState.selectedSettingsTab) {
-            let _ = Log.ui.debug("SettingsView: constructing PromptsSettingsView tab")
             PromptsSettingsView(viewModel: SettingsViewModel(appState: appState))
                 .tabItem {
                     Label("Prompts", systemImage: "text.bubble")
                 }
                 .tag(SettingsTab.prompts)
 
-            let _ = Log.ui.debug("SettingsView: constructing APIKeysSettingsView tab")
             APIKeysSettingsView(viewModel: SettingsViewModel(appState: appState))
                 .tabItem {
                     Label("API Keys", systemImage: "key")
                 }
                 .tag(SettingsTab.apiKeys)
 
-            let _ = Log.ui.debug("SettingsView: constructing ShortcutSettingsView tab")
             ShortcutSettingsView(viewModel: SettingsViewModel(appState: appState))
                 .tabItem {
                     Label("Shortcuts", systemImage: "keyboard")
                 }
                 .tag(SettingsTab.shortcuts)
 
-            let _ = Log.ui.debug("SettingsView: all tabs constructed")
+            AboutSettingsView()
+                .tabItem {
+                    Label("About", systemImage: "info.circle")
+                }
+                .tag(SettingsTab.about)
         }
         .frame(width: 550, height: 565)
         .onChange(of: appState.selectedSettingsTab) { oldTab, newTab in

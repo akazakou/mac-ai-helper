@@ -1,11 +1,11 @@
 {
   "appPolicies" : {
-    "eula" : "",
+    "eula" : "https://www.castloud.com/eula.html",
     "policies" : [
       {
         "locale" : "en_US",
         "policyText" : "",
-        "policyURL" : ""
+        "policyURL" : "https://www.castloud.com/privacy.html"
       }
     ]
   },

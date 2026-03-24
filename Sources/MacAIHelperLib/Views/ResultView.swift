@@ -20,6 +20,7 @@ struct ResultView: View {
                 errorView(error)
             } else {
                 responseView
+                aiDisclaimerFooter
             }
 
             Divider()
@@ -74,6 +75,20 @@ struct ResultView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 150)
         .padding(12)
+    }
+
+    // MARK: - AI Disclaimer
+
+    private var aiDisclaimerFooter: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "info.circle")
+                .font(.caption2)
+            Text("AI-generated content — may not be accurate. Verify important information independently.")
+                .font(.caption2)
+        }
+        .foregroundStyle(.tertiary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
     // MARK: - Action Bar

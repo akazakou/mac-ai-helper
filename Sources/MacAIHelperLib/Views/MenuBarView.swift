@@ -32,6 +32,16 @@ public struct MenuBarView: View {
         }
         .keyboardShortcut(",", modifiers: .command)
 
+        // About
+        Button("About Mac AI Helper") {
+            AppDelegate.shared?.openSettings(tab: .about)
+        }
+
+        // Privacy Policy (opens in default browser)
+        Button("Privacy Policy") {
+            NSWorkspace.shared.open(URL(string: "https://www.castloud.com/privacy.html")!)
+        }
+
         Divider()
 
         // Shortcut hints (rendered as disabled/info menu items)

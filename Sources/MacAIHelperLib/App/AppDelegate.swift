@@ -10,6 +10,7 @@ public enum SettingsTab: Hashable, Sendable {
     case prompts
     case apiKeys
     case shortcuts
+    case about
 }
 
 @MainActor
@@ -165,12 +166,17 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             // Simulate Cmd+C to copy selected text from the frontmost app
             let text = await PasteboardService.copySelectedText()
-            guard let text, !text.isEmpty else {
-                Log.hotkey.debug("No text captured — skipping prompt popup")
-                return
+
+            if let text, !text.isEmpty {
+                appState.capturedText = text
+            } else {
+                // Show the popup anyway so the user gets visual feedback
+                // that the shortcut worked, even if no text was selected.
+                Log.hotkey.debug("No text captured — showing prompt popup with empty state")
+                appState.capturedText = nil
+                appState.lastError = "No text was captured. Select text in another app and try again."
             }
 
-            appState.capturedText = text
             appState.capturedImage = nil
             showPromptPopup()
         }
