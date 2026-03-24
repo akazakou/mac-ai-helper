@@ -19,11 +19,11 @@ enum TipPurchaseState: Sendable {
 final class TipJarService {
     /// All product identifiers for tip amounts
     static let productIDs: [String] = [
-        "com.castloud.MacAIHelper.tip.1",
-        "com.castloud.MacAIHelper.tip.5",
-        "com.castloud.MacAIHelper.tip.10",
-        "com.castloud.MacAIHelper.tip.30",
-        "com.castloud.MacAIHelper.tip.50",
+        "com.castloud.MacAIHelper.tips.1",
+        "com.castloud.MacAIHelper.tips.5",
+        "com.castloud.MacAIHelper.tips.10",
+        "com.castloud.MacAIHelper.tips.30",
+        "com.castloud.MacAIHelper.tips.50",
     ]
 
     /// Loaded StoreKit products, sorted by price ascending
@@ -40,6 +40,7 @@ final class TipJarService {
     private var transactionListenerTask: Task<Void, Never>?
 
     init() {
+        Log.tipjar.info("TipJarService initialized")
         transactionListenerTask = listenForTransactions()
     }
 
@@ -54,11 +55,18 @@ final class TipJarService {
         isLoadingProducts = true
         defer { isLoadingProducts = false }
 
+        Log.tipjar.info("Loading tip products for IDs: \(Self.productIDs.joined(separator: ", "))")
+
         do {
             let storeProducts = try await Product.products(for: Self.productIDs)
+            Log.tipjar.info("StoreKit returned \(storeProducts.count) product(s)")
+            for product in storeProducts {
+                Log.tipjar.debug("  Product: \(product.id) — \(product.displayName) — \(product.displayPrice) — type: \(product.type.rawValue)")
+            }
             products = storeProducts.sorted { $0.price < $1.price }
         } catch {
-            Log.tipjar.error("Failed to load tip products: \(error.localizedDescription)")
+            Log.tipjar.error("Failed to load tip products: \(error)")
+            Log.tipjar.error("Error type: \(type(of: error)), description: \(error.localizedDescription)")
             products = []
         }
     }
@@ -67,6 +75,7 @@ final class TipJarService {
 
     /// Initiates a purchase for the given product.
     func purchase(_ product: Product) async {
+        Log.tipjar.info("Initiating purchase for product: \(product.id) (\(product.displayPrice))")
         purchaseState = .purchasing
 
         do {
@@ -77,19 +86,24 @@ final class TipJarService {
                 let transaction = try checkVerified(verification)
                 // Consumable — finish immediately
                 await transaction.finish()
+                Log.tipjar.info("Purchase successful for product: \(product.id)")
                 purchaseState = .success
 
             case .userCancelled:
+                Log.tipjar.info("Purchase cancelled by user for product: \(product.id)")
                 purchaseState = .idle
 
             case .pending:
                 // Transaction requires approval (e.g., Ask to Buy)
+                Log.tipjar.info("Purchase pending approval for product: \(product.id)")
                 purchaseState = .idle
 
             @unknown default:
+                Log.tipjar.warning("Unknown purchase result for product: \(product.id)")
                 purchaseState = .idle
             }
         } catch {
+            Log.tipjar.error("Purchase failed for product \(product.id): \(error)")
             purchaseState = .failed(error.localizedDescription)
         }
     }

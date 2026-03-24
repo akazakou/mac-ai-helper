@@ -30,6 +30,11 @@ packages:
     url: https://github.com/gonzalezreal/swift-markdown-ui
     from: '2.4.0'
 
+# --- File Groups (project-level references, not added to any build phase) ----
+
+fileGroups:
+  - SupportFiles/StoreKitConfiguration.storekit
+
 # --- Build Configurations ----------------------------------------------------
 
 configs:
@@ -60,6 +65,11 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         MARKETING_VERSION: '1.0.0'
         CURRENT_PROJECT_VERSION: '1'
+      configs:
+        Debug:
+          ONLY_ACTIVE_ARCH: true
+        Release:
+          ONLY_ACTIVE_ARCH: false
 
   # Main application target — thin entry point + resources.
   MacAIHelper:
@@ -81,14 +91,22 @@ targets:
         INFOPLIST_FILE: SupportFiles/Info.plist
         CODE_SIGN_ENTITLEMENTS: SupportFiles/MacAIHelper.entitlements
         GENERATE_INFOPLIST_FILE: false
-        # Signing is handled by the Makefile; disable automatic signing here
-        CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: ''
-        PROVISIONING_PROFILE_SPECIFIER: ''
         SWIFT_STRICT_CONCURRENCY: complete
-        # Universal binary (arm64 + x86_64)
+        # Universal binary (arm64 + x86_64) for Release
         ARCHS: '$(ARCHS_STANDARD)'
-        ONLY_ACTIVE_ARCH: false
+      configs:
+        # Debug: automatic signing for running from Xcode (enables StoreKit sandbox)
+        Debug:
+          CODE_SIGN_STYLE: Automatic
+          DEVELOPMENT_TEAM: T2MHQ9ZQXG
+          CODE_SIGN_IDENTITY: 'Apple Development'
+          ONLY_ACTIVE_ARCH: true
+        # Release: manual signing handled by Makefile
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: ''
+          PROVISIONING_PROFILE_SPECIFIER: ''
+          ONLY_ACTIVE_ARCH: false
 
   # Unit test target
   MacAIHelperTests:
@@ -112,6 +130,7 @@ schemes:
         MacAIHelperTests: [test]
     run:
       config: Debug
+      storeKitConfiguration: SupportFiles/StoreKitConfiguration.storekit
     test:
       config: Debug
       targets:
