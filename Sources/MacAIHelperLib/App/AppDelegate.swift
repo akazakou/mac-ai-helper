@@ -162,12 +162,18 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let text = PasteboardService.readText()
-        guard let text, !text.isEmpty else { return }
+        Task { @MainActor in
+            // Simulate Cmd+C to copy selected text from the frontmost app
+            let text = await PasteboardService.copySelectedText()
+            guard let text, !text.isEmpty else {
+                Log.hotkey.debug("No text captured — skipping prompt popup")
+                return
+            }
 
-        appState.capturedText = text
-        appState.capturedImage = nil
-        showPromptPopup()
+            appState.capturedText = text
+            appState.capturedImage = nil
+            showPromptPopup()
+        }
     }
 
     private func handleScreenshotShortcut() {

@@ -14,6 +14,9 @@ struct ShortcutSettingsView: View {
     /// Tracks screen recording permission status (loaded asynchronously)
     @State private var hasScreenCapturePermission = false
 
+    /// Tracks accessibility permission status (needed for text copy simulation)
+    @State private var hasAccessibilityPermission = false
+
     var body: some View {
         let _ = Log.ui.debug("ShortcutSettingsView body evaluation started")
         VStack(alignment: .leading, spacing: 16) {
@@ -112,6 +115,29 @@ struct ShortcutSettingsView: View {
                     }
                     let _ = Log.ui.debug("ShortcutSettingsView: Permissions — HStack content complete")
                 }
+                // Accessibility permission row (needed for text copy simulation via Cmd+C)
+                HStack {
+                    Image(
+                        systemName: hasAccessibilityPermission
+                            ? "checkmark.circle.fill" : "xmark.circle.fill"
+                    )
+                    .foregroundStyle(hasAccessibilityPermission ? .green : .red)
+
+                    Text("Accessibility")
+                    Spacer()
+
+                    if !hasAccessibilityPermission {
+                        Button("Open Settings") {
+                            NSWorkspace.shared.open(
+                                URL(
+                                    string:
+                                        "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+                                )!)
+                        }
+                        .font(.caption)
+                    }
+                }
+
                 let _ = Log.ui.debug("ShortcutSettingsView: Permissions — VStack content complete")
             }
             .padding()
@@ -124,9 +150,10 @@ struct ShortcutSettingsView: View {
         }
         .padding()
         .task {
-            Log.ui.debug("ShortcutSettingsView: .task started — checking screen capture permission")
+            Log.ui.debug("ShortcutSettingsView: .task started — checking permissions")
             hasScreenCapturePermission = await ScreenCaptureService.checkPermission()
-            Log.ui.debug("ShortcutSettingsView: .task completed — permission=\(hasScreenCapturePermission)")
+            hasAccessibilityPermission = PasteboardService.checkAccessibilityPermission()
+            Log.ui.debug("ShortcutSettingsView: .task completed — screenCapture=\(hasScreenCapturePermission), accessibility=\(hasAccessibilityPermission)")
         }
     }
 }
