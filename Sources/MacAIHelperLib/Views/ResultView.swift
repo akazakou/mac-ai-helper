@@ -1,6 +1,7 @@
 // ResultView.swift
 // Displays the AI response with copy-to-clipboard functionality.
 
+import AppKit
 import MarkdownUI
 import SwiftUI
 
@@ -34,6 +35,9 @@ struct ResultView: View {
         ScrollView {
             Markdown(viewModel.responseText)
                 .textSelection(.enabled)
+                .markdownTextStyle(\.text) {
+                    FontSize(NSFont.systemFontSize)
+                }
                 .markdownTheme(.gitHub)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
