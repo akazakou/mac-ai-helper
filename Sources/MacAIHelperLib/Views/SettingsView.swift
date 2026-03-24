@@ -35,7 +35,7 @@ struct SettingsView: View {
 
             let _ = Log.ui.debug("SettingsView: all tabs constructed")
         }
-        .frame(width: 550, height: 450)
+        .frame(width: 550, height: 565)
         .onChange(of: appState.selectedSettingsTab) { oldTab, newTab in
             Log.ui.info("Settings tab changed from \(String(describing: oldTab)) to \(String(describing: newTab))")
         }
