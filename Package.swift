@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.2.2"),
+        .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.0"),
     ],
     targets: [
         // Library target containing all business logic, views, models, and services.
@@ -14,6 +15,7 @@ let package = Package(
             name: "MacAIHelperLib",
             dependencies: [
                 "KeyboardShortcuts",
+                .product(name: "MarkdownUI", package: "swift-markdown-ui"),
             ],
             path: "Sources/MacAIHelperLib"
         ),

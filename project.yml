@@ -26,6 +26,9 @@ packages:
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
     from: '2.2.2'
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    from: '2.4.0'
 
 # --- Build Configurations ----------------------------------------------------
 
@@ -45,6 +48,8 @@ targets:
       - path: Sources/MacAIHelperLib
     dependencies:
       - package: KeyboardShortcuts
+      - package: MarkdownUI
+        product: MarkdownUI
     settings:
       base:
         SWIFT_VERSION: '6.0'
