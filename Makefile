@@ -302,22 +302,12 @@ appstore-upload: appstore-pkg
 		echo "   $(APPSTORE_PKG)"; \
 		exit 1; \
 	fi
-	@if [ "$(APP_PASSWORD)" = "@keychain:notarytool" ]; then \
-		echo "  Using keychain credentials (profile: notarytool)"; \
-		xcrun altool --upload-app \
-			--type macos \
-			--file "$(APPSTORE_PKG)" \
-			--apple-id "$(APPLE_ID)" \
-			--team-id "$(TEAM_ID)" \
-			--password "$(APP_PASSWORD)"; \
-	else \
-		xcrun altool --upload-app \
-			--type macos \
-			--file "$(APPSTORE_PKG)" \
-			--apple-id "$(APPLE_ID)" \
-			--team-id "$(TEAM_ID)" \
-			--password "$(APP_PASSWORD)"; \
-	fi
+	xcrun altool --upload-app \
+		--type macos \
+		--file "$(APPSTORE_PKG)" \
+		--username "$(APPLE_ID)" \
+		--asc-provider "$(TEAM_ID)" \
+		--app-password "$(APP_PASSWORD)"
 	@echo "✅ Uploaded to App Store Connect"
 
 # --- Full App Store pipeline --------------------------------------------------

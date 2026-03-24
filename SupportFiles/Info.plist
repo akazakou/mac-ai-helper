@@ -18,6 +18,9 @@
     <string>NSApplication</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
+    <!-- App Store category: Utilities -->
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
     <!-- No Dock icon — menu bar only -->
     <key>LSUIElement</key>
     <true/>
