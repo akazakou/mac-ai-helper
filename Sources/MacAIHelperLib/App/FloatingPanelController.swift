@@ -16,8 +16,50 @@ final class FloatingPanelController {
     /// Local event monitor for ESC key to dismiss the panel
     private var escKeyMonitor: Any?
 
+    // MARK: - Panel Size Constants & Persistence Keys
+
+    /// Default initial panel size (used when no saved size exists)
+    private static let defaultWidth: CGFloat = 600
+    private static let defaultHeight: CGFloat = 650
+
+    private static let minWidth: CGFloat = 480
+    private static let minHeight: CGFloat = 260
+    private static let maxWidth: CGFloat = 1200
+    private static let maxHeight: CGFloat = 1170
+
+    /// UserDefaults keys for persisting the user-chosen panel size
+    private static let panelWidthKey = "floatingPanelWidth"
+    private static let panelHeightKey = "floatingPanelHeight"
+
     init(appState: AppState) {
         self.appState = appState
+    }
+
+    // MARK: - Size Persistence Helpers
+
+    /// Returns the saved panel size from UserDefaults, clamped to min/max bounds,
+    /// or the default size if nothing was saved yet.
+    private func restoredPanelSize() -> NSSize {
+        let defaults = UserDefaults.standard
+        let savedWidth = defaults.double(forKey: Self.panelWidthKey)
+        let savedHeight = defaults.double(forKey: Self.panelHeightKey)
+
+        // If both values are zero the user has never resized — use defaults
+        guard savedWidth > 0, savedHeight > 0 else {
+            return NSSize(width: Self.defaultWidth, height: Self.defaultHeight)
+        }
+
+        let clampedWidth = min(max(CGFloat(savedWidth), Self.minWidth), Self.maxWidth)
+        let clampedHeight = min(max(CGFloat(savedHeight), Self.minHeight), Self.maxHeight)
+        return NSSize(width: clampedWidth, height: clampedHeight)
+    }
+
+    /// Persists the current panel frame size to UserDefaults.
+    private func savePanelSize() {
+        guard let size = panel?.frame.size else { return }
+        let defaults = UserDefaults.standard
+        defaults.set(Double(size.width), forKey: Self.panelWidthKey)
+        defaults.set(Double(size.height), forKey: Self.panelHeightKey)
     }
 
     /// Shows the prompt popup panel centered on the screen.
@@ -38,9 +80,12 @@ final class FloatingPanelController {
         // Create the hosting view
         let hostingView = NSHostingView(rootView: contentView)
 
+        // Restore saved size or fall back to defaults
+        let panelSize = restoredPanelSize()
+
         // Create floating panel (resizable by the user)
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
+            contentRect: NSRect(x: 0, y: 0, width: panelSize.width, height: panelSize.height),
             styleMask: [.titled, .resizable, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -57,8 +102,8 @@ final class FloatingPanelController {
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
-        panel.minSize = NSSize(width: 320, height: 200)
-        panel.maxSize = NSSize(width: 800, height: 900)
+        panel.minSize = NSSize(width: Self.minWidth, height: Self.minHeight)
+        panel.maxSize = NSSize(width: Self.maxWidth, height: Self.maxHeight)
         panel.contentView = hostingView
 
         // Center on screen
@@ -110,6 +155,9 @@ final class FloatingPanelController {
             NSEvent.removeMonitor(monitor)
             escKeyMonitor = nil
         }
+
+        // Persist the current panel size before closing
+        savePanelSize()
 
         panel?.close()
         panel = nil
