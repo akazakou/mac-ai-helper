@@ -41,6 +41,7 @@ struct AnthropicService: AIServiceProtocol {
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 4096,
+            "system": SystemPromptFactory.currentDateTimeSystemPrompt(),
             "messages": [
                 ["role": "user", "content": prompt]
             ],
@@ -74,6 +75,7 @@ struct AnthropicService: AIServiceProtocol {
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 4096,
+            "system": SystemPromptFactory.currentDateTimeSystemPrompt(),
             "messages": [
                 [
                     "role": "user",

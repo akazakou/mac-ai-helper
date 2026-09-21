@@ -42,6 +42,7 @@ struct OpenAIService: AIServiceProtocol {
         let body: [String: Any] = [
             "model": model,
             "messages": [
+                ["role": "system", "content": SystemPromptFactory.currentDateTimeSystemPrompt()],
                 ["role": "user", "content": prompt]
             ],
         ]
@@ -73,6 +74,7 @@ struct OpenAIService: AIServiceProtocol {
         let body: [String: Any] = [
             "model": model,
             "messages": [
+                ["role": "system", "content": SystemPromptFactory.currentDateTimeSystemPrompt()],
                 [
                     "role": "user",
                     "content": [

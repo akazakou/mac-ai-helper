@@ -52,6 +52,11 @@ struct GeminiService: AIServiceProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let body: [String: Any] = [
+            "system_instruction": [
+                "parts": [
+                    ["text": SystemPromptFactory.currentDateTimeSystemPrompt()]
+                ]
+            ],
             "contents": [
                 ["parts": [["text": prompt]]]
             ]
@@ -81,6 +86,11 @@ struct GeminiService: AIServiceProtocol {
 
         let base64Image = imageData.base64EncodedString()
         let body: [String: Any] = [
+            "system_instruction": [
+                "parts": [
+                    ["text": SystemPromptFactory.currentDateTimeSystemPrompt()]
+                ]
+            ],
             "contents": [
                 [
                     "parts": [
