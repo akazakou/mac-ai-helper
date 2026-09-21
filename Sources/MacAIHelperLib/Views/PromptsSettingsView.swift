@@ -135,6 +135,7 @@ private struct PromptEditorSheet: View {
     @State private var title: String
     @State private var template: String
     @State private var icon: String
+    @State private var webSearchEnabled: Bool
 
     init(mode: PromptEditorMode, viewModel: SettingsViewModel, dismiss: @escaping () -> Void) {
         self.mode = mode
@@ -146,10 +147,12 @@ private struct PromptEditorSheet: View {
             _title = State(initialValue: "")
             _template = State(initialValue: "")
             _icon = State(initialValue: "text.bubble")
+            _webSearchEnabled = State(initialValue: false)
         case .editing(let prompt):
             _title = State(initialValue: prompt.title)
             _template = State(initialValue: prompt.template)
             _icon = State(initialValue: prompt.icon)
+            _webSearchEnabled = State(initialValue: prompt.webSearchEnabled)
         }
     }
 
@@ -177,6 +180,11 @@ private struct PromptEditorSheet: View {
                 }
 
                 IconPickerView(selectedIcon: $icon)
+
+                Toggle(isOn: $webSearchEnabled) {
+                    Label("Enable web search", systemImage: "magnifyingglass")
+                }
+                .help("Let the model search the web for up-to-date information when answering this prompt")
             }
 
             // Hint about optional {text} placeholder
@@ -208,11 +216,14 @@ private struct PromptEditorSheet: View {
     private func savePrompt() {
         switch mode {
         case .new:
-            viewModel.addPrompt(title: title, template: template, icon: icon)
+            viewModel.addPrompt(
+                title: title, template: template, icon: icon, webSearchEnabled: webSearchEnabled
+            )
         case .editing(var existing):
             existing.title = title
             existing.template = template
             existing.icon = icon
+            existing.webSearchEnabled = webSearchEnabled
             viewModel.updatePrompt(existing)
         }
     }
@@ -237,8 +248,16 @@ private struct PromptRowView: View {
                 .foregroundStyle(Color.accentColor)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(prompt.title)
-                    .font(.body)
+                HStack(spacing: 4) {
+                    Text(prompt.title)
+                        .font(.body)
+                    if prompt.webSearchEnabled {
+                        Image(systemName: "globe")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .help("Web search enabled")
+                    }
+                }
                 Text(prompt.template)
                     .font(.caption)
                     .foregroundStyle(.secondary)

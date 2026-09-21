@@ -11,10 +11,14 @@ protocol AIServiceProtocol: Sendable {
     func fetchModels(apiKey: String) async throws -> [AIModel]
 
     /// Sends a text prompt to the specified model and returns the response.
-    func sendPrompt(_ prompt: String, model: String, apiKey: String) async throws -> String
+    /// When webSearch is true, the provider's native web search tool is enabled.
+    func sendPrompt(
+        _ prompt: String, model: String, apiKey: String, webSearch: Bool
+    ) async throws -> String
 
     /// Sends a prompt with an image to the specified model and returns the response.
+    /// When webSearch is true, the provider's native web search tool is enabled.
     func sendPromptWithImage(
-        _ prompt: String, imageData: Data, model: String, apiKey: String
+        _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
     ) async throws -> String
 }

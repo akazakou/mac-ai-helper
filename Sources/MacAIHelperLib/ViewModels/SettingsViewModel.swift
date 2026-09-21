@@ -32,8 +32,12 @@ final class SettingsViewModel {
     // MARK: - Prompt Management
 
     /// Adds a new prompt to the list.
-    func addPrompt(title: String, template: String, icon: String = "text.bubble") {
-        let prompt = Prompt(title: title, template: template, icon: icon)
+    func addPrompt(
+        title: String, template: String, icon: String = "text.bubble", webSearchEnabled: Bool = false
+    ) {
+        let prompt = Prompt(
+            title: title, template: template, icon: icon, webSearchEnabled: webSearchEnabled
+        )
         appState.settings.prompts.append(prompt)
         appState.saveSettings()
     }

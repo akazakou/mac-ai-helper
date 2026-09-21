@@ -18,7 +18,9 @@ struct AnthropicService: AIServiceProtocol {
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue(anthropicVersion, forHTTPHeaderField: "anthropic-version")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request, metadata: .modelListing(provider: provider)
+        )
         try validateResponse(response, data: data)
 
         let decoded = try JSONDecoder().decode(AnthropicModelsResponse.self, from: data)
@@ -30,7 +32,9 @@ struct AnthropicService: AIServiceProtocol {
     // MARK: - Send Text Prompt
 
     /// POST /v1/messages — sends a text prompt to Claude.
-    func sendPrompt(_ prompt: String, model: String, apiKey: String) async throws -> String {
+    func sendPrompt(
+        _ prompt: String, model: String, apiKey: String, webSearch: Bool
+    ) async throws -> String {
         let url = provider.baseURL.appendingPathComponent("messages")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -38,7 +42,7 @@ struct AnthropicService: AIServiceProtocol {
         request.setValue(anthropicVersion, forHTTPHeaderField: "anthropic-version")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": model,
             "max_tokens": 4096,
             "system": SystemPromptFactory.currentDateTimeSystemPrompt(),
@@ -46,23 +50,28 @@ struct AnthropicService: AIServiceProtocol {
                 ["role": "user", "content": prompt]
             ],
         ]
+        if webSearch {
+            applyWebSearchTool(to: &body)
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request,
+            metadata: AIRequestLogger.Metadata(
+                provider: provider, model: model, webSearch: webSearch, hasImage: false,
+                purpose: "text prompt"
+            )
+        )
         try validateResponse(response, data: data)
 
-        let decoded = try JSONDecoder().decode(AnthropicMessageResponse.self, from: data)
-        guard let textBlock = decoded.content.first(where: { $0.type == "text" }) else {
-            throw AppError.decodingError("No text content in response")
-        }
-        return textBlock.text ?? ""
+        return try extractText(from: data)
     }
 
     // MARK: - Send Prompt with Image
 
     /// POST /v1/messages — sends a prompt with a base64-encoded image to Claude.
     func sendPromptWithImage(
-        _ prompt: String, imageData: Data, model: String, apiKey: String
+        _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
     ) async throws -> String {
         let url = provider.baseURL.appendingPathComponent("messages")
         var request = URLRequest(url: url)
@@ -72,7 +81,7 @@ struct AnthropicService: AIServiceProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let base64Image = imageData.base64EncodedString()
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": model,
             "max_tokens": 4096,
             "system": SystemPromptFactory.currentDateTimeSystemPrompt(),
@@ -93,19 +102,45 @@ struct AnthropicService: AIServiceProtocol {
                 ] as [String: Any]
             ],
         ]
+        if webSearch {
+            applyWebSearchTool(to: &body)
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request,
+            metadata: AIRequestLogger.Metadata(
+                provider: provider, model: model, webSearch: webSearch, hasImage: true,
+                purpose: "image prompt"
+            )
+        )
         try validateResponse(response, data: data)
 
-        let decoded = try JSONDecoder().decode(AnthropicMessageResponse.self, from: data)
-        guard let textBlock = decoded.content.first(where: { $0.type == "text" }) else {
-            throw AppError.decodingError("No text content in response")
-        }
-        return textBlock.text ?? ""
+        return try extractText(from: data)
     }
 
     // MARK: - Helpers
+
+    /// Adds Anthropic's server-side web search tool to a request body.
+    private func applyWebSearchTool(to body: inout [String: Any]) {
+        body["tools"] = [
+            [
+                "type": "web_search_20250305",
+                "name": "web_search",
+            ]
+        ]
+    }
+
+    /// Extracts the answer text from a messages response.
+    /// Web search responses interleave tool-result blocks with text blocks, so all text is joined.
+    private func extractText(from data: Data) throws -> String {
+        let decoded = try JSONDecoder().decode(AnthropicMessageResponse.self, from: data)
+        let textBlocks = decoded.content.filter { $0.type == "text" }.compactMap(\.text)
+        guard let answer = textBlocks.last, !answer.isEmpty else {
+            throw AppError.decodingError("No text content in response")
+        }
+        return answer
+    }
 
     private func validateResponse(_ response: URLResponse, data: Data) throws {
         guard let httpResponse = response as? HTTPURLResponse else {

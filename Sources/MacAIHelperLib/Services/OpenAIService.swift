@@ -1,5 +1,7 @@
 // OpenAIService.swift
 // Handles communication with the OpenAI API for model listing and chat completions.
+// Web-search requests use the Responses API, which is the only API exposing
+// OpenAI's native web_search tool.
 
 import Foundation
 
@@ -14,7 +16,9 @@ struct OpenAIService: AIServiceProtocol {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request, metadata: .modelListing(provider: provider)
+        )
         try validateResponse(response, data: data)
 
         let decoded = try JSONDecoder().decode(OpenAIModelsResponse.self, from: data)
@@ -31,8 +35,19 @@ struct OpenAIService: AIServiceProtocol {
 
     // MARK: - Send Text Prompt
 
-    /// POST /v1/chat/completions — sends a text prompt.
-    func sendPrompt(_ prompt: String, model: String, apiKey: String) async throws -> String {
+    /// POST /v1/chat/completions (or /v1/responses with the web_search tool) — sends a text prompt.
+    func sendPrompt(
+        _ prompt: String, model: String, apiKey: String, webSearch: Bool
+    ) async throws -> String {
+        if webSearch {
+            return try await sendResponsesRequest(
+                userContent: [["type": "input_text", "text": prompt]],
+                model: model,
+                apiKey: apiKey,
+                hasImage: false
+            )
+        }
+
         let url = provider.baseURL.appendingPathComponent("chat/completions")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -48,7 +63,13 @@ struct OpenAIService: AIServiceProtocol {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request,
+            metadata: AIRequestLogger.Metadata(
+                provider: provider, model: model, webSearch: webSearch, hasImage: false,
+                purpose: "text prompt"
+            )
+        )
         try validateResponse(response, data: data)
 
         let decoded = try JSONDecoder().decode(OpenAIChatResponse.self, from: data)
@@ -60,17 +81,31 @@ struct OpenAIService: AIServiceProtocol {
 
     // MARK: - Send Prompt with Image
 
-    /// POST /v1/chat/completions — sends a prompt with a base64-encoded image.
+    /// POST /v1/chat/completions (or /v1/responses with the web_search tool) — sends a prompt with a base64-encoded image.
     func sendPromptWithImage(
-        _ prompt: String, imageData: Data, model: String, apiKey: String
+        _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
     ) async throws -> String {
+        let base64Image = imageData.base64EncodedString()
+        let dataURL = "data:image/png;base64,\(base64Image)"
+
+        if webSearch {
+            return try await sendResponsesRequest(
+                userContent: [
+                    ["type": "input_text", "text": prompt],
+                    ["type": "input_image", "image_url": dataURL],
+                ],
+                model: model,
+                apiKey: apiKey,
+                hasImage: true
+            )
+        }
+
         let url = provider.baseURL.appendingPathComponent("chat/completions")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let base64Image = imageData.base64EncodedString()
         let body: [String: Any] = [
             "model": model,
             "messages": [
@@ -81,7 +116,7 @@ struct OpenAIService: AIServiceProtocol {
                         ["type": "text", "text": prompt],
                         [
                             "type": "image_url",
-                            "image_url": ["url": "data:image/png;base64,\(base64Image)"],
+                            "image_url": ["url": dataURL],
                         ],
                     ],
                 ] as [String: Any]
@@ -89,7 +124,13 @@ struct OpenAIService: AIServiceProtocol {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request,
+            metadata: AIRequestLogger.Metadata(
+                provider: provider, model: model, webSearch: webSearch, hasImage: true,
+                purpose: "image prompt"
+            )
+        )
         try validateResponse(response, data: data)
 
         let decoded = try JSONDecoder().decode(OpenAIChatResponse.self, from: data)
@@ -100,6 +141,50 @@ struct OpenAIService: AIServiceProtocol {
     }
 
     // MARK: - Helpers
+
+    /// POST /v1/responses — sends a prompt with OpenAI's native web_search tool enabled.
+    private func sendResponsesRequest(
+        userContent: [[String: Any]], model: String, apiKey: String, hasImage: Bool
+    ) async throws -> String {
+        let url = provider.baseURL.appendingPathComponent("responses")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "model": model,
+            "instructions": SystemPromptFactory.currentDateTimeSystemPrompt(),
+            "input": [
+                ["role": "user", "content": userContent]
+            ],
+            "tools": [
+                ["type": "web_search"]
+            ],
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await AIRequestLogger.perform(
+            request,
+            metadata: AIRequestLogger.Metadata(
+                provider: provider, model: model, webSearch: true, hasImage: hasImage,
+                purpose: "text prompt (Responses API, web search)"
+            )
+        )
+        try validateResponse(response, data: data)
+
+        let decoded = try JSONDecoder().decode(OpenAIResponsesResponse.self, from: data)
+        let text = decoded.output
+            .compactMap { $0.content }
+            .flatMap { $0 }
+            .filter { $0.type == "output_text" }
+            .compactMap(\.text)
+            .joined(separator: "\n\n")
+        guard !text.isEmpty else {
+            throw AppError.decodingError("No content in response")
+        }
+        return text
+    }
 
     private func validateResponse(_ response: URLResponse, data: Data) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -135,6 +220,20 @@ private struct OpenAIChatChoice: Decodable {
 
 private struct OpenAIChatMessage: Decodable {
     let content: String?
+}
+
+private struct OpenAIResponsesResponse: Decodable {
+    let output: [OpenAIResponsesOutputItem]
+}
+
+private struct OpenAIResponsesOutputItem: Decodable {
+    let type: String
+    let content: [OpenAIResponsesContentBlock]?
+}
+
+private struct OpenAIResponsesContentBlock: Decodable {
+    let type: String
+    let text: String?
 }
 
 private struct OpenAIErrorResponse: Decodable {

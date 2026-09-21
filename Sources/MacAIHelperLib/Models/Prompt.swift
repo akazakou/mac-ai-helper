@@ -11,12 +11,31 @@ public struct Prompt: Identifiable, Codable, Hashable, Sendable {
     public var template: String
     /// SF Symbol name for the prompt icon
     public var icon: String
+    /// Enables the provider-native web search tool for this prompt (fact checking, current events)
+    public var webSearchEnabled: Bool
 
-    public init(id: UUID = UUID(), title: String, template: String, icon: String = "text.bubble") {
+    public init(
+        id: UUID = UUID(),
+        title: String,
+        template: String,
+        icon: String = "text.bubble",
+        webSearchEnabled: Bool = false
+    ) {
         self.id = id
         self.title = title
         self.template = template
         self.icon = icon
+        self.webSearchEnabled = webSearchEnabled
+    }
+
+    /// Custom decoding keeps prompts saved before the webSearchEnabled field loadable.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        template = try container.decode(String.self, forKey: .template)
+        icon = try container.decode(String.self, forKey: .icon)
+        webSearchEnabled = try container.decodeIfPresent(Bool.self, forKey: .webSearchEnabled) ?? false
     }
 
     /// Resolves the template by replacing {text} with actual content.

@@ -191,6 +191,13 @@ private struct PromptButton: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
+                if prompt.webSearchEnabled {
+                    Image(systemName: "globe")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .help("Web search enabled")
+                }
+
                 Spacer()
 
                 Image(systemName: "chevron.right")

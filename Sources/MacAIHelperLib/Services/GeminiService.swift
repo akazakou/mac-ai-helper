@@ -19,7 +19,9 @@ struct GeminiService: AIServiceProtocol {
         var request = URLRequest(url: components.url!)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request, metadata: .modelListing(provider: provider)
+        )
         try validateResponse(response, data: data)
 
         let decoded = try JSONDecoder().decode(GeminiModelsResponse.self, from: data)
@@ -45,13 +47,10 @@ struct GeminiService: AIServiceProtocol {
     // MARK: - Send Text Prompt
 
     /// POST /v1beta/models/{model}:generateContent?key={key} — sends a text prompt.
-    func sendPrompt(_ prompt: String, model: String, apiKey: String) async throws -> String {
-        let url = try buildGenerateContentURL(model: model, apiKey: apiKey)
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let body: [String: Any] = [
+    func sendPrompt(
+        _ prompt: String, model: String, apiKey: String, webSearch: Bool
+    ) async throws -> String {
+        var body: [String: Any] = [
             "system_instruction": [
                 "parts": [
                     ["text": SystemPromptFactory.currentDateTimeSystemPrompt()]
@@ -61,31 +60,22 @@ struct GeminiService: AIServiceProtocol {
                 ["parts": [["text": prompt]]]
             ]
         ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try validateResponse(response, data: data)
-
-        let decoded = try JSONDecoder().decode(GeminiGenerateResponse.self, from: data)
-        guard let text = decoded.candidates?.first?.content.parts.first?.text else {
-            throw AppError.decodingError("No text content in Gemini response")
+        if webSearch {
+            applyGoogleSearchTool(to: &body)
         }
-        return text
+        return try await generateContent(
+            model: model, apiKey: apiKey, body: body, hasImage: false, webSearch: webSearch
+        )
     }
 
     // MARK: - Send Prompt with Image
 
     /// POST /v1beta/models/{model}:generateContent?key={key} — sends a prompt with an image.
     func sendPromptWithImage(
-        _ prompt: String, imageData: Data, model: String, apiKey: String
+        _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
     ) async throws -> String {
-        let url = try buildGenerateContentURL(model: model, apiKey: apiKey)
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let base64Image = imageData.base64EncodedString()
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "system_instruction": [
                 "parts": [
                     ["text": SystemPromptFactory.currentDateTimeSystemPrompt()]
@@ -105,19 +95,46 @@ struct GeminiService: AIServiceProtocol {
                 ]
             ]
         ]
+        if webSearch {
+            applyGoogleSearchTool(to: &body)
+        }
+        return try await generateContent(
+            model: model, apiKey: apiKey, body: body, hasImage: false, webSearch: webSearch
+        )
+    }
+
+    // MARK: - Helpers
+
+    /// Adds Gemini's native Google Search grounding tool to a request body.
+    private func applyGoogleSearchTool(to body: inout [String: Any]) {
+        body["tools"] = [["google_search": [String: String]()]]
+    }
+
+    /// POSTs a generateContent body and extracts the first text part from the response.
+    private func generateContent(
+        model: String, apiKey: String, body: [String: Any], hasImage: Bool, webSearch: Bool
+    ) async throws -> String {
+        let url = try buildGenerateContentURL(model: model, apiKey: apiKey)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request,
+            metadata: AIRequestLogger.Metadata(
+                provider: provider, model: model, webSearch: webSearch, hasImage: hasImage,
+                purpose: "prompt"
+            )
+        )
         try validateResponse(response, data: data)
 
         let decoded = try JSONDecoder().decode(GeminiGenerateResponse.self, from: data)
-        guard let text = decoded.candidates?.first?.content.parts.first?.text else {
+        guard let text = decoded.candidates?.first?.content.parts.compactMap(\.text).first else {
             throw AppError.decodingError("No text content in Gemini response")
         }
         return text
     }
-
-    // MARK: - Helpers
 
     private func buildGenerateContentURL(model: String, apiKey: String) throws -> URL {
         let path = "models/\(model):generateContent"

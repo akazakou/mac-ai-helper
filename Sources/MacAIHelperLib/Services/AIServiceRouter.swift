@@ -23,17 +23,20 @@ struct AIServiceRouter: Sendable {
 
     /// Sends a text prompt to the specified model via the appropriate provider.
     static func sendPrompt(
-        _ prompt: String, model: String, provider: AIProvider, apiKey: String
+        _ prompt: String, model: String, provider: AIProvider, apiKey: String, webSearch: Bool
     ) async throws -> String {
-        try await service(for: provider).sendPrompt(prompt, model: model, apiKey: apiKey)
+        try await service(for: provider).sendPrompt(
+            prompt, model: model, apiKey: apiKey, webSearch: webSearch
+        )
     }
 
     /// Sends a prompt with an image to the specified model via the appropriate provider.
     static func sendPromptWithImage(
-        _ prompt: String, imageData: Data, model: String, provider: AIProvider, apiKey: String
+        _ prompt: String, imageData: Data, model: String, provider: AIProvider, apiKey: String,
+        webSearch: Bool
     ) async throws -> String {
         try await service(for: provider).sendPromptWithImage(
-            prompt, imageData: imageData, model: model, apiKey: apiKey
+            prompt, imageData: imageData, model: model, apiKey: apiKey, webSearch: webSearch
         )
     }
 }

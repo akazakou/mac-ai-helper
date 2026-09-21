@@ -14,7 +14,9 @@ struct OpenRouterService: AIServiceProtocol {
         var request = URLRequest(url: modelsURL)
         applyHeaders(to: &request, apiKey: apiKey)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(
+            request, metadata: .modelListing(provider: provider)
+        )
         try validateResponse(response, data: data)
 
         let decoded = try JSONDecoder().decode(OpenRouterModelsResponse.self, from: data)
@@ -29,26 +31,34 @@ struct OpenRouterService: AIServiceProtocol {
     // MARK: - Send Text Prompt
 
     /// POST /api/v1/chat/completions — sends a text prompt.
-    func sendPrompt(_ prompt: String, model: String, apiKey: String) async throws -> String {
+    func sendPrompt(
+        _ prompt: String, model: String, apiKey: String, webSearch: Bool
+    ) async throws -> String {
         let body: [String: Any] = [
-            "model": model,
+            "model": routedModelId(model, webSearch: webSearch),
             "messages": [
                 ["role": "system", "content": SystemPromptFactory.currentDateTimeSystemPrompt()],
                 ["role": "user", "content": prompt]
             ],
         ]
-        return try await sendChatCompletion(body: body, apiKey: apiKey)
+        return try await sendChatCompletion(
+            body: body, apiKey: apiKey,
+            metadata: AIRequestLogger.Metadata(
+                provider: provider, model: model, webSearch: webSearch, hasImage: false,
+                purpose: "text prompt"
+            )
+        )
     }
 
     // MARK: - Send Prompt with Image
 
     /// POST /api/v1/chat/completions — sends a prompt with a base64-encoded image.
     func sendPromptWithImage(
-        _ prompt: String, imageData: Data, model: String, apiKey: String
+        _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
     ) async throws -> String {
         let base64Image = imageData.base64EncodedString()
         let body: [String: Any] = [
-            "model": model,
+            "model": routedModelId(model, webSearch: webSearch),
             "messages": [
                 ["role": "system", "content": SystemPromptFactory.currentDateTimeSystemPrompt()],
                 [
@@ -63,10 +73,21 @@ struct OpenRouterService: AIServiceProtocol {
                 ] as [String: Any]
             ],
         ]
-        return try await sendChatCompletion(body: body, apiKey: apiKey)
+        return try await sendChatCompletion(
+            body: body, apiKey: apiKey,
+            metadata: AIRequestLogger.Metadata(
+                provider: provider, model: model, webSearch: webSearch, hasImage: true,
+                purpose: "image prompt"
+            )
+        )
     }
 
     // MARK: - Helpers
+
+    /// OpenRouter's web plugin is enabled by appending ":online" to the model id.
+    private func routedModelId(_ model: String, webSearch: Bool) -> String {
+        webSearch ? "\(model):online" : model
+    }
 
     private var modelsURL: URL {
         provider.baseURL.appendingPathComponent("models")
@@ -83,14 +104,16 @@ struct OpenRouterService: AIServiceProtocol {
     }
 
     /// POSTs a chat completion body and extracts the assistant message content.
-    private func sendChatCompletion(body: [String: Any], apiKey: String) async throws -> String {
+    private func sendChatCompletion(
+        body: [String: Any], apiKey: String, metadata: AIRequestLogger.Metadata
+    ) async throws -> String {
         var request = URLRequest(url: chatCompletionsURL)
         request.httpMethod = "POST"
         applyHeaders(to: &request, apiKey: apiKey)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AIRequestLogger.perform(request, metadata: metadata)
         try validateResponse(response, data: data)
 
         let decoded = try JSONDecoder().decode(OpenRouterChatResponse.self, from: data)
