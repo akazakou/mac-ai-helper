@@ -73,14 +73,16 @@ struct SettingsViewModelTests {
         #expect(AIProvider.openAI.baseURL.host == "api.openai.com")
         #expect(AIProvider.anthropic.baseURL.host == "api.anthropic.com")
         #expect(AIProvider.gemini.baseURL.host == "generativelanguage.googleapis.com")
+        #expect(AIProvider.openRouter.baseURL.host == "openrouter.ai")
     }
 
-    @Test("AIProvider allCases contains all three providers")
+    @Test("AIProvider allCases contains all four providers")
     func providerAllCases() {
-        #expect(AIProvider.allCases.count == 3)
+        #expect(AIProvider.allCases.count == 4)
         #expect(AIProvider.allCases.contains(.openAI))
         #expect(AIProvider.allCases.contains(.anthropic))
         #expect(AIProvider.allCases.contains(.gemini))
+        #expect(AIProvider.allCases.contains(.openRouter))
     }
 
     @Test("APIKeyEntry defaults label to provider name")

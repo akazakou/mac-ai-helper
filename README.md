@@ -8,7 +8,7 @@ A native macOS menu bar utility that captures selected text or screenshots via g
 - **Global Shortcuts** — Trigger from any application (sandbox-compatible via Carbon hotkeys)
   - `⇧⌘C` (`Cmd+Shift+C`) — Capture selected text and show prompt popup
   - `⌃⌘C` (`Ctrl+Cmd+C`) — Capture a screenshot region and show prompt popup
-- **Multiple AI Providers** — Supports OpenAI, Anthropic (Claude), and Google Gemini
+- **Multiple AI Providers** — Supports OpenAI, Anthropic (Claude), Google Gemini, and OpenRouter
 - **Dynamic Model Listing** — Fetches available models from each provider's API
 - **Custom Prompts** — Configure unlimited AI prompt templates
 - **Secure Key Storage** — API keys stored in macOS Keychain
@@ -139,7 +139,7 @@ Sources/MacAIHelperLib/
 ### Key Components
 
 - **HotkeyService** — Global shortcuts via KeyboardShortcuts (Carbon RegisterEventHotKey)
-- **AIServiceRouter** — Routes requests to OpenAI, Anthropic, or Gemini
+- **AIServiceRouter** — Routes requests to OpenAI, Anthropic, Gemini, or OpenRouter
 - **KeychainService** — Secure API key storage in macOS Keychain
 - **SettingsService** — JSON-based settings persistence in Application Support
 - **FloatingPanelController** — NSPanel-based floating popup window

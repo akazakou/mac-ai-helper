@@ -98,6 +98,7 @@ struct APIKeysSettingsView: View {
         case .openAI: "brain"
         case .anthropic: "sparkle"
         case .gemini: "diamond"
+        case .openRouter: "network"
         }
     }
 

@@ -11,7 +11,7 @@
 
 ## 1. App Overview
 
-Mac AI Helper is a native macOS menu bar utility that enables users to quickly analyze selected text or screenshot regions using AI services (OpenAI, Anthropic, Google Gemini). The app lives exclusively in the menu bar (LSUIElement) with no Dock icon, registers global keyboard shortcuts, and presents a floating popup for prompt selection and AI response display.
+Mac AI Helper is a native macOS menu bar utility that enables users to quickly analyze selected text or screenshot regions using AI services (OpenAI, Anthropic, Google Gemini, OpenRouter). The app lives exclusively in the menu bar (LSUIElement) with no Dock icon, registers global keyboard shortcuts, and presents a floating popup for prompt selection and AI response display.
 
 **Core workflow:**
 
@@ -36,6 +36,7 @@ Mac AI Helper is a native macOS menu bar utility that enables users to quickly a
    - **OpenAI:** Get a key at https://platform.openai.com/api-keys
    - **Anthropic:** Get a key at https://console.anthropic.com/settings/keys
    - **Google Gemini:** Get a key at https://aistudio.google.com/app/apikey
+   - **OpenRouter:** Get a key at https://openrouter.ai/settings/keys
 4. After adding a key, the app will automatically fetch the available models from the provider.
 5. **Grant permissions** (see Section 4 below for details on Accessibility and Screen Recording).
 6. **Test the text shortcut:** Select any text in any app → press ⇧⌘C (Cmd+Shift+C) → pick a prompt → view the AI response.
@@ -211,6 +212,7 @@ This data is transmitted over HTTPS directly to the provider's API endpoint. It 
 - OpenAI: `https://api.openai.com/v1/`
 - Anthropic: `https://api.anthropic.com/v1/`
 - Google Gemini: `https://generativelanguage.googleapis.com/v1beta/`
+- OpenRouter: `https://openrouter.ai/api/v1/`
 
 ### 8.4 Recommended App Privacy Responses
 

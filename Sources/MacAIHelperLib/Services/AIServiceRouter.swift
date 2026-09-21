@@ -10,6 +10,7 @@ struct AIServiceRouter: Sendable {
         case .openAI: OpenAIService()
         case .anthropic: AnthropicService()
         case .gemini: GeminiService()
+        case .openRouter: OpenRouterService()
         }
     }
 
