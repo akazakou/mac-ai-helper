@@ -55,17 +55,12 @@ struct PromptPopupView: View {
                 ProgressView()
                     .scaleEffect(0.7)
             } else if !viewModel.availableModels.isEmpty {
-                Picker("Model", selection: Binding(
-                    get: { viewModel.selectedModelId ?? "" },
-                    set: { viewModel.selectedModelId = $0.isEmpty ? nil : $0 }
-                )) {
-                    ForEach(viewModel.availableModels) { model in
-                        Text(model.name)
-                            .tag(model.id)
-                    }
+                ModelPickerView(
+                    models: viewModel.availableModels,
+                    selectedModelId: viewModel.selectedModelId
+                ) { model in
+                    viewModel.selectedModelId = model.id
                 }
-                .labelsHidden()
-                .frame(maxWidth: 180)
             } else {
                 Text("No models")
                     .font(.caption)

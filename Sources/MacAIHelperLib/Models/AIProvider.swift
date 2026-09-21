@@ -11,6 +11,16 @@ public enum AIProvider: String, Codable, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
+    /// Compact label shown next to model names, e.g. "[Google] Gemma 3"
+    public var displayName: String {
+        switch self {
+        case .openAI: "OpenAI"
+        case .anthropic: "Anthropic"
+        case .gemini: "Google"
+        case .openRouter: "OpenRouter"
+        }
+    }
+
     /// Base URL for the provider's API
     public var baseURL: URL {
         switch self {
