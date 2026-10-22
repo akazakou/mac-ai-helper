@@ -13,22 +13,26 @@ public struct Prompt: Identifiable, Codable, Hashable, Sendable {
     public var icon: String
     /// Enables the provider-native web search tool for this prompt (fact checking, current events)
     public var webSearchEnabled: Bool
+    /// AI model used to run this prompt. Stored in full so an outdated model can still be displayed.
+    public var model: AIModel?
 
     public init(
         id: UUID = UUID(),
         title: String,
         template: String,
         icon: String = "text.bubble",
-        webSearchEnabled: Bool = false
+        webSearchEnabled: Bool = false,
+        model: AIModel? = nil
     ) {
         self.id = id
         self.title = title
         self.template = template
         self.icon = icon
         self.webSearchEnabled = webSearchEnabled
+        self.model = model
     }
 
-    /// Custom decoding keeps prompts saved before the webSearchEnabled field loadable.
+    /// Custom decoding keeps prompts saved before the webSearchEnabled and model fields loadable.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
@@ -36,6 +40,7 @@ public struct Prompt: Identifiable, Codable, Hashable, Sendable {
         template = try container.decode(String.self, forKey: .template)
         icon = try container.decode(String.self, forKey: .icon)
         webSearchEnabled = try container.decodeIfPresent(Bool.self, forKey: .webSearchEnabled) ?? false
+        model = try container.decodeIfPresent(AIModel.self, forKey: .model)
     }
 
     /// Resolves the template by replacing {text} with actual content.

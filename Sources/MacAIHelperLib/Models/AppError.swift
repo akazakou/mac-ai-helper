@@ -6,6 +6,7 @@ import Foundation
 public enum AppError: LocalizedError, Sendable {
     case noAPIKey(AIProvider)
     case noModelSelected
+    case modelUnavailable(String)
     case networkError(String)
     case apiError(statusCode: Int, message: String)
     case decodingError(String)
@@ -19,7 +20,9 @@ public enum AppError: LocalizedError, Sendable {
         case .noAPIKey(let provider):
             "No API key configured for \(provider.rawValue)"
         case .noModelSelected:
-            "No AI model selected"
+            "No AI model selected for this prompt. Choose one in Settings → Prompts."
+        case .modelUnavailable(let modelName):
+            "Model \"\(modelName)\" is no longer available. Choose another model for this prompt in Settings → Prompts."
         case .networkError(let msg):
             "Network error: \(msg)"
         case .apiError(let code, let msg):

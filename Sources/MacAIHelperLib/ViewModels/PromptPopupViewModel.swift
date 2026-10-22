@@ -1,5 +1,5 @@
 // PromptPopupViewModel.swift
-// Manages prompt selection, model picker state, and AI request execution.
+// Manages prompt execution with each prompt's own AI model.
 
 import Foundation
 
@@ -9,33 +9,13 @@ final class PromptPopupViewModel {
     /// Reference to the shared app state
     private let appState: AppState
 
-    /// Whether models are currently being loaded (delegates to AppState)
-    var isLoadingModels: Bool {
-        appState.isLoadingModels
-    }
-
     init(appState: AppState) {
         self.appState = appState
     }
 
-    /// All available models across providers
-    var availableModels: [AIModel] {
-        appState.availableModels
-    }
-
-    /// Currently selected model ID
-    var selectedModelId: String? {
-        get { appState.settings.selectedModelId }
-        set {
-            appState.settings.selectedModelId = newValue
-            // Update provider based on selected model
-            if let modelId = newValue,
-                let model = appState.availableModels.first(where: { $0.id == modelId })
-            {
-                appState.settings.selectedProvider = model.provider
-            }
-            appState.saveSettings()
-        }
+    /// Availability of the given prompt's model, used for badge rendering
+    func availability(of prompt: Prompt) -> ModelAvailability {
+        appState.availability(of: prompt.model)
     }
 
     // MARK: - Model Loading
@@ -52,73 +32,55 @@ final class PromptPopupViewModel {
     func selectPrompt(_ prompt: Prompt) async {
         guard let text = appState.capturedText else { return }
         let resolvedPrompt = prompt.resolved(with: text)
-        await executeAIRequest(prompt: resolvedPrompt, webSearch: prompt.webSearchEnabled)
+        await run(prompt) { model, apiKey in
+            try await AIServiceRouter.sendPrompt(
+                resolvedPrompt, model: model.id, provider: model.provider, apiKey: apiKey,
+                webSearch: prompt.webSearchEnabled
+            )
+        }
     }
 
     /// Executes a prompt with captured image data.
     func selectPromptWithImage(_ prompt: Prompt, imageData: Data) async {
         let resolvedPrompt = prompt.resolved(with: "Analyze this image.")
-        await executeAIRequestWithImage(
-            prompt: resolvedPrompt, imageData: imageData, webSearch: prompt.webSearchEnabled
-        )
+        await run(prompt) { model, apiKey in
+            try await AIServiceRouter.sendPromptWithImage(
+                resolvedPrompt, imageData: imageData, model: model.id, provider: model.provider,
+                apiKey: apiKey, webSearch: prompt.webSearchEnabled
+            )
+        }
     }
 
     // MARK: - Private
 
-    private func executeAIRequest(prompt: String, webSearch: Bool) async {
-        guard let modelId = appState.settings.selectedModelId,
-            let provider = appState.settings.selectedProvider
-        else {
-            appState.lastError = AppError.noModelSelected.localizedDescription
-            return
-        }
-
-        appState.isLoading = true
+    /// Validates the prompt's model, then performs the request and publishes the result or error.
+    private func run(
+        _ prompt: Prompt,
+        request: (AIModel, String) async throws -> String
+    ) async {
         appState.lastError = nil
+        appState.isLoading = true
+        defer { appState.isLoading = false }
 
         do {
+            let model = try usableModel(for: prompt)
             let apiKey = try KeychainService.apiKey(
-                for: provider, entries: appState.settings.apiKeyEntries
+                for: model.provider, entries: appState.settings.apiKeyEntries
             )
-            let response = try await AIServiceRouter.sendPrompt(
-                prompt, model: modelId, provider: provider, apiKey: apiKey, webSearch: webSearch
-            )
-            appState.aiResponse = response
+            appState.aiResponse = try await request(model, apiKey)
             appState.showingResult = true
         } catch {
             appState.lastError = error.localizedDescription
         }
-
-        appState.isLoading = false
     }
 
-    private func executeAIRequestWithImage(
-        prompt: String, imageData: Data, webSearch: Bool
-    ) async {
-        guard let modelId = appState.settings.selectedModelId,
-            let provider = appState.settings.selectedProvider
-        else {
-            appState.lastError = AppError.noModelSelected.localizedDescription
-            return
+    /// Returns the prompt's model, or throws if it is missing or known to be outdated.
+    /// Models whose provider list failed to load are still sent, letting the API decide.
+    private func usableModel(for prompt: Prompt) throws -> AIModel {
+        guard let model = prompt.model else { throw AppError.noModelSelected }
+        if appState.availability(of: model) == .outdated {
+            throw AppError.modelUnavailable(model.name)
         }
-
-        appState.isLoading = true
-        appState.lastError = nil
-
-        do {
-            let apiKey = try KeychainService.apiKey(
-                for: provider, entries: appState.settings.apiKeyEntries
-            )
-            let response = try await AIServiceRouter.sendPromptWithImage(
-                prompt, imageData: imageData, model: modelId, provider: provider, apiKey: apiKey,
-                webSearch: webSearch
-            )
-            appState.aiResponse = response
-            appState.showingResult = true
-        } catch {
-            appState.lastError = error.localizedDescription
-        }
-
-        appState.isLoading = false
+        return model
     }
 }

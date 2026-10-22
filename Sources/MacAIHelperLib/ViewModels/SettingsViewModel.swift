@@ -31,13 +31,23 @@ final class SettingsViewModel {
 
     // MARK: - Prompt Management
 
+    /// All available models across providers
+    var availableModels: [AIModel] {
+        appState.availableModels
+    }
+
+    /// Whether provider model lists are currently being fetched
+    var isLoadingModels: Bool {
+        appState.isLoadingModels
+    }
+
+    /// Resolves whether a model can currently be used by a prompt.
+    func availability(of model: AIModel?) -> ModelAvailability {
+        appState.availability(of: model)
+    }
+
     /// Adds a new prompt to the list.
-    func addPrompt(
-        title: String, template: String, icon: String = "text.bubble", webSearchEnabled: Bool = false
-    ) {
-        let prompt = Prompt(
-            title: title, template: template, icon: icon, webSearchEnabled: webSearchEnabled
-        )
+    func addPrompt(_ prompt: Prompt) {
         appState.settings.prompts.append(prompt)
         appState.saveSettings()
     }

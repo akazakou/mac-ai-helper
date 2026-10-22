@@ -267,10 +267,15 @@ public final class AppState {
     /// Available AI models fetched from providers
     public var availableModels: [AIModel] = []
 
+    /// Providers whose models list failed to load during the last fetch
+    public var failedProviders: Set<AIProvider> = []
+
     private let settingsService = SettingsService()
 
     public init() {
-        self.settings = SettingsService().loadSettings()
+        var loadedSettings = SettingsService().loadSettings()
+        loadedSettings.migrateLegacyModelSelection()
+        self.settings = loadedSettings
     }
 
     public func saveSettings() {
@@ -295,6 +300,7 @@ public final class AppState {
 
         let configuredProviders = Set(settings.apiKeyEntries.map(\.provider))
         var allModels: [AIModel] = []
+        var failed: Set<AIProvider> = []
 
         for provider in configuredProviders {
             do {
@@ -307,18 +313,52 @@ public final class AppState {
                 )
                 allModels.append(contentsOf: models)
             } catch {
+                failed.insert(provider)
                 Log.ai.error("Failed to fetch models for \(provider.rawValue): \(error.localizedDescription)")
             }
         }
 
         availableModels = allModels.sorted { $0.name < $1.name }
+        failedProviders = failed
         isLoadingModels = false
 
-        // Auto-select first model if none selected
-        if settings.selectedModelId == nil, let firstModel = availableModels.first {
-            settings.selectedModelId = firstModel.id
-            settings.selectedProvider = firstModel.provider
-            saveSettings()
+        syncPromptModels()
+    }
+
+    /// Resolves whether a prompt's model can currently be used.
+    public func availability(of model: AIModel?) -> ModelAvailability {
+        guard let model else { return .notSelected }
+        if isLoadingModels { return .loading }
+        if !settings.apiKeyEntries.contains(where: { $0.provider == model.provider })
+            || failedProviders.contains(model.provider)
+        {
+            return .providerLoadFailed
         }
+        return fetchedModel(matching: model) == nil ? .outdated : .available
+    }
+
+    // MARK: - Private
+
+    private func fetchedModel(matching model: AIModel) -> AIModel? {
+        availableModels.first { $0.id == model.id && $0.provider == model.provider }
+    }
+
+    /// Assigns the first available model to prompts without one and refreshes
+    /// display names of known models. Outdated models are never replaced silently.
+    private func syncPromptModels() {
+        let defaultModel = availableModels.first
+        var updatedPrompts = settings.prompts
+
+        for index in updatedPrompts.indices {
+            if let model = updatedPrompts[index].model {
+                updatedPrompts[index].model = fetchedModel(matching: model) ?? model
+            } else {
+                updatedPrompts[index].model = defaultModel
+            }
+        }
+
+        guard updatedPrompts != settings.prompts else { return }
+        settings.prompts = updatedPrompts
+        saveSettings()
     }
 }

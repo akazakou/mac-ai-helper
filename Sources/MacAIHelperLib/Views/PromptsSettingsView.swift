@@ -47,6 +47,7 @@ struct PromptsSettingsView: View {
                 ForEach(viewModel.settings.prompts) { prompt in
                     PromptRowView(
                         prompt: prompt,
+                        modelAvailability: viewModel.availability(of: prompt.model),
                         onEdit: { editorMode = .editing(prompt) },
                         onDelete: { promptToDelete = prompt }
                     )
@@ -136,6 +137,7 @@ private struct PromptEditorSheet: View {
     @State private var template: String
     @State private var icon: String
     @State private var webSearchEnabled: Bool
+    @State private var model: AIModel?
 
     init(mode: PromptEditorMode, viewModel: SettingsViewModel, dismiss: @escaping () -> Void) {
         self.mode = mode
@@ -148,17 +150,34 @@ private struct PromptEditorSheet: View {
             _template = State(initialValue: "")
             _icon = State(initialValue: "text.bubble")
             _webSearchEnabled = State(initialValue: false)
+            _model = State(initialValue: viewModel.availableModels.first)
         case .editing(let prompt):
             _title = State(initialValue: prompt.title)
             _template = State(initialValue: prompt.template)
             _icon = State(initialValue: prompt.icon)
             _webSearchEnabled = State(initialValue: prompt.webSearchEnabled)
+            _model = State(initialValue: prompt.model)
         }
     }
 
     private var isEditing: Bool {
         if case .editing = mode { return true }
         return false
+    }
+
+    private var modelAvailability: ModelAvailability {
+        viewModel.availability(of: model)
+    }
+
+    /// Outdated, missing, or not-yet-verified models block saving; provider load failures only warn.
+    private var canSave: Bool {
+        guard !title.isEmpty, !template.isEmpty else { return false }
+        switch modelAvailability {
+        case .available, .providerLoadFailed:
+            return true
+        case .notSelected, .loading, .outdated:
+            return false
+        }
     }
 
     var body: some View {
@@ -169,6 +188,8 @@ private struct PromptEditorSheet: View {
             Form {
                 TextField("Title", text: $title)
                     .textFieldStyle(.roundedBorder)
+
+                modelSection
 
                 VStack(alignment: .leading) {
                     Text("Template")
@@ -206,24 +227,76 @@ private struct PromptEditorSheet: View {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(title.isEmpty || template.isEmpty)
+                .disabled(!canSave)
             }
         }
         .padding()
-        .frame(width: 400, height: 390)
+        .frame(width: 400, height: 470)
+    }
+
+    // MARK: - Model Section
+
+    private var modelSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Model")
+                Spacer()
+                if viewModel.availableModels.isEmpty && model == nil && !viewModel.isLoadingModels {
+                    Text("No models — add an API key")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ModelPickerView(
+                        models: viewModel.availableModels,
+                        selectedModel: model,
+                        isHighlightedAsError: modelAvailability.isError
+                    ) { selected in
+                        model = selected
+                    }
+                }
+            }
+
+            PromptBadgesView(
+                model: model, availability: modelAvailability, webSearchEnabled: webSearchEnabled
+            )
+
+            modelStatusMessage
+        }
+    }
+
+    @ViewBuilder
+    private var modelStatusMessage: some View {
+        if modelAvailability == .loading {
+            HStack(spacing: 6) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Loading models…")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        } else if let warning = modelAvailability.warningMessage(for: model) {
+            Text(warning)
+                .font(.caption)
+                .foregroundStyle(.red)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private func savePrompt() {
         switch mode {
         case .new:
             viewModel.addPrompt(
-                title: title, template: template, icon: icon, webSearchEnabled: webSearchEnabled
+                Prompt(
+                    title: title, template: template, icon: icon,
+                    webSearchEnabled: webSearchEnabled, model: model
+                )
             )
         case .editing(var existing):
             existing.title = title
             existing.template = template
             existing.icon = icon
             existing.webSearchEnabled = webSearchEnabled
+            existing.model = model
             viewModel.updatePrompt(existing)
         }
     }
@@ -231,9 +304,10 @@ private struct PromptEditorSheet: View {
 
 // MARK: - Prompt Row View
 
-/// A single row in the prompts list with edit and delete actions.
+/// A single row in the prompts list with badges, edit and delete actions.
 private struct PromptRowView: View {
     let prompt: Prompt
+    let modelAvailability: ModelAvailability
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -248,16 +322,13 @@ private struct PromptRowView: View {
                 .foregroundStyle(Color.accentColor)
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text(prompt.title)
-                        .font(.body)
-                    if prompt.webSearchEnabled {
-                        Image(systemName: "globe")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .help("Web search enabled")
-                    }
-                }
+                Text(prompt.title)
+                    .font(.body)
+                PromptBadgesView(
+                    model: prompt.model,
+                    availability: modelAvailability,
+                    webSearchEnabled: prompt.webSearchEnabled
+                )
                 Text(prompt.template)
                     .font(.caption)
                     .foregroundStyle(.secondary)

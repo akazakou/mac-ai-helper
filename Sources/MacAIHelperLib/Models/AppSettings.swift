@@ -11,9 +11,9 @@ public struct AppSettings: Codable, Sendable {
     public var prompts: [Prompt]
     /// Metadata for API keys (actual keys stored in Keychain)
     public var apiKeyEntries: [APIKeyEntry]
-    /// Currently selected AI model identifier
+    /// Legacy global model identifier, kept only to migrate it into prompts (see migrateLegacyModelSelection)
     public var selectedModelId: String?
-    /// Currently selected AI provider
+    /// Legacy global AI provider, kept only to migrate it into prompts (see migrateLegacyModelSelection)
     public var selectedProvider: AIProvider?
     /// Whether the app should launch automatically at system login
     public var launchAtLogin: Bool
@@ -45,5 +45,20 @@ public struct AppSettings: Codable, Sendable {
             selectedProvider: nil,
             launchAtLogin: false
         )
+    }
+
+    /// Moves the legacy global model selection into every prompt that has no model yet.
+    /// The real model name is refreshed once provider model lists are fetched.
+    public mutating func migrateLegacyModelSelection() {
+        defer {
+            selectedModelId = nil
+            selectedProvider = nil
+        }
+        guard let modelId = selectedModelId, let provider = selectedProvider else { return }
+
+        let legacyModel = AIModel(id: modelId, name: modelId, provider: provider)
+        for index in prompts.indices where prompts[index].model == nil {
+            prompts[index].model = legacyModel
+        }
     }
 }

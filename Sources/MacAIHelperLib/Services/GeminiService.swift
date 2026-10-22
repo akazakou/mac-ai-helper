@@ -99,7 +99,7 @@ struct GeminiService: AIServiceProtocol {
             applyGoogleSearchTool(to: &body)
         }
         return try await generateContent(
-            model: model, apiKey: apiKey, body: body, hasImage: false, webSearch: webSearch
+            model: model, apiKey: apiKey, body: body, hasImage: true, webSearch: webSearch
         )
     }
 

@@ -1,5 +1,5 @@
 // PromptPopupView.swift
-// Floating popup showing model selector and prompt list.
+// Floating popup showing the prompt list, each prompt labelled with its own model.
 // Appears when the user triggers a text or screenshot shortcut.
 
 import SwiftUI
@@ -13,7 +13,7 @@ struct PromptPopupView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header with model selector
+            // Header
             headerView
 
             Divider()
@@ -49,23 +49,6 @@ struct PromptPopupView: View {
                 .font(.headline)
 
             Spacer()
-
-            // Model selector
-            if viewModel.isLoadingModels {
-                ProgressView()
-                    .scaleEffect(0.7)
-            } else if !viewModel.availableModels.isEmpty {
-                ModelPickerView(
-                    models: viewModel.availableModels,
-                    selectedModelId: viewModel.selectedModelId
-                ) { model in
-                    viewModel.selectedModelId = model.id
-                }
-            } else {
-                Text("No models")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
 
             // Close button
             Button {
@@ -122,7 +105,9 @@ struct PromptPopupView: View {
 
                 // Prompt buttons - read directly from appState for reliable observation
                 ForEach(appState.settings.prompts) { prompt in
-                    PromptButton(prompt: prompt) {
+                    PromptButton(
+                        prompt: prompt, modelAvailability: viewModel.availability(of: prompt)
+                    ) {
                         Task {
                             if let imageData = appState.capturedImage {
                                 await viewModel.selectPromptWithImage(
@@ -175,6 +160,7 @@ struct PromptPopupView: View {
 /// A single prompt row in the popup list.
 private struct PromptButton: View {
     let prompt: Prompt
+    let modelAvailability: ModelAvailability
     let action: () -> Void
 
     @State private var isHovered = false
@@ -186,16 +172,17 @@ private struct PromptButton: View {
                     .frame(width: 20)
                     .foregroundStyle(Color.accentColor)
 
-                Text(prompt.title)
-                    .font(.body)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(prompt.title)
+                        .font(.body)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
 
-                if prompt.webSearchEnabled {
-                    Image(systemName: "globe")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .help("Web search enabled")
+                    PromptBadgesView(
+                        model: prompt.model,
+                        availability: modelAvailability,
+                        webSearchEnabled: prompt.webSearchEnabled
+                    )
                 }
 
                 Spacer()

@@ -10,6 +10,7 @@ A native macOS menu bar utility that captures selected text or screenshots via g
   - `⌃⌘C` (`Ctrl+Cmd+C`) — Capture a screenshot region and show prompt popup
 - **Multiple AI Providers** — Supports OpenAI, Anthropic (Claude), Google Gemini, and OpenRouter
 - **Dynamic Model Listing** — Fetches available models from each provider's API
+- **Per-Prompt Models** — Each prompt uses its own model, picked in the prompt editor; outdated or unreachable models are flagged with badges
 - **Custom Prompts** — Configure unlimited AI prompt templates
 - **Secure Key Storage** — API keys stored in macOS Keychain
 - **Native UI** — Built with SwiftUI, uses floating panels for the popup

@@ -4,9 +4,12 @@
 import SwiftUI
 
 /// Model selector showing "[Provider] Model name" rows, filterable by model name.
+/// The selected model is shown even when it is missing from `models` (e.g. outdated).
 struct ModelPickerView: View {
     let models: [AIModel]
-    let selectedModelId: String?
+    let selectedModel: AIModel?
+    /// Renders the selected model label in red to signal a problem with it
+    var isHighlightedAsError = false
     let onSelect: (AIModel) -> Void
 
     @State private var isShown = false
@@ -20,8 +23,8 @@ struct ModelPickerView: View {
         return models.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 
-    private var selectedModel: AIModel? {
-        models.first { $0.id == selectedModelId }
+    private func isSelected(_ model: AIModel) -> Bool {
+        model.id == selectedModel?.id && model.provider == selectedModel?.provider
     }
 
     var body: some View {
@@ -30,6 +33,9 @@ struct ModelPickerView: View {
         } label: {
             HStack(spacing: 4) {
                 if let model = selectedModel {
+                    if isHighlightedAsError {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
                     providerLabel(model.provider)
                     Text(model.name)
                         .lineLimit(1)
@@ -41,6 +47,7 @@ struct ModelPickerView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+            .foregroundStyle(isHighlightedAsError ? Color.red : Color.primary)
         }
         .buttonStyle(.plain)
         .popover(isPresented: $isShown, arrowEdge: .bottom) {
@@ -76,7 +83,7 @@ struct ModelPickerView: View {
                         ForEach(filteredModels) { model in
                             ModelRow(
                                 model: model,
-                                isSelected: model.id == selectedModelId
+                                isSelected: isSelected(model)
                             ) {
                                 onSelect(model)
                                 isShown = false
@@ -111,7 +118,7 @@ struct ModelPickerView: View {
 
     private func providerLabel(_ provider: AIProvider) -> some View {
         Text("[\(provider.displayName)]")
-            .foregroundStyle(.secondary)
+            .foregroundStyle(isHighlightedAsError ? Color.red : Color.secondary)
             .lineLimit(1)
     }
 }
