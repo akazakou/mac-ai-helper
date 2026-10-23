@@ -76,7 +76,7 @@ ICNS_OUTPUT        := $(BUILD_DIR)/AppIcon.icns
 # --- Phony targets -----------------------------------------------------------
 
 .PHONY: all app clean generate-xcodeproj xcode-build icon app-bundle embed-profile \
-        check-identity help dev \
+        check-identity help dev install reset-permissions \
         appstore-icon appstore appstore-sign appstore-pkg appstore-upload \
         store-credentials
 
@@ -95,6 +95,8 @@ help:
 	@echo "  Local Development:"
 	@echo "  ──────────────────"
 	@echo "  make dev               Build & launch locally (App Store signed)"
+	@echo "  make install           Build, sign & install into /Applications"
+	@echo "  make reset-permissions Reset stale Accessibility/Screen Recording grants"
 	@echo ""
 	@echo "  Build:"
 	@echo "  ──────"
@@ -143,18 +145,45 @@ check-identity:
 
 # --- Build & launch locally (App Store signed) --------------------------------
 
-dev: clean app-bundle embed-profile
-	@echo "🔏 Signing with App Store certificate..."
-	@echo "   Identity: $(APPSTORE_APP_IDENTITY)"
-	codesign --force --deep --sign "$(APPSTORE_APP_IDENTITY)" \
-		--entitlements $(ENTITLEMENTS) \
-		--timestamp \
-		"$(APP_BUNDLE)"
-	@echo "✅ App Store signed"
+dev: clean appstore-sign
 	@codesign --verify --verbose "$(APP_BUNDLE)"
 	@echo ""
 	@echo "🚀 Launching $(DISPLAY_NAME)..."
 	@open "$(APP_BUNDLE)"
+
+# --- Build, sign & install into /Applications ---------------------------------
+# macOS privacy permissions (Accessibility, Screen Recording) are bound to the
+# code signature. Unsigned `make app` builds never match previously granted
+# permissions, so always install via this target for local use.
+
+INSTALL_DIR        := /Applications
+INSTALLED_APP      := $(INSTALL_DIR)/$(APP_NAME).app
+
+install: appstore-sign
+	@codesign --verify --strict "$(APP_BUNDLE)"
+	@# pkill only sends SIGTERM and returns at once. Wait for the old process to exit,
+	@# otherwise `open` re-activates it instead of launching the freshly installed build.
+	@if pkill -x $(APP_NAME) 2>/dev/null; then \
+		echo "⏹  Stopping running $(DISPLAY_NAME)..."; \
+		for _ in $$(seq 1 25); do pgrep -x $(APP_NAME) >/dev/null || break; sleep 0.2; done; \
+		pkill -9 -x $(APP_NAME) 2>/dev/null || true; \
+	fi
+	@echo "📥 Installing to $(INSTALLED_APP)..."
+	@rm -rf "$(INSTALLED_APP)"
+	ditto "$(APP_BUNDLE)" "$(INSTALLED_APP)"
+	@echo "✅ Installed. If permissions still show as missing, run: make reset-permissions"
+	@open "$(INSTALLED_APP)"
+
+# --- Reset stale macOS privacy grants -----------------------------------------
+# Clears grants recorded for older (differently signed) builds; macOS will ask
+# again on next use. Includes the legacy bundle ID used before the rename.
+
+reset-permissions:
+	@echo "🔄 Resetting Accessibility and Screen Recording grants..."
+	tccutil reset Accessibility $(BUNDLE_ID)
+	tccutil reset ScreenCapture $(BUNDLE_ID)
+	-tccutil reset All pro.kantora.MacAIHelper
+	@echo "✅ Done. Relaunch $(DISPLAY_NAME) and grant permissions again."
 
 # --- Embed provisioning profile into .app bundle -----------------------------
 
@@ -237,6 +266,8 @@ app-bundle: xcode-build icon
 
 app: app-bundle
 	@echo "✅ $(DISPLAY_NAME).app is ready at $(APP_BUNDLE)"
+	@echo "⚠️  This bundle is UNSIGNED: macOS Accessibility and Screen Recording"
+	@echo "   permissions will not work with it. Use 'make install' for local use."
 
 # ==============================================================================
 # MAC APP STORE

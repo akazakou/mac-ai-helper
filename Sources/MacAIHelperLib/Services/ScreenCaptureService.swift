@@ -77,7 +77,7 @@ struct ScreenCaptureService: Sendable {
             Mac AI Helper needs Screen Recording permission to capture screenshots.
 
             Please open System Settings → Privacy & Security → Screen Recording, \
-            then enable access for Terminal (or MacAIHelper).
+            then enable access for Mac AI Helper.
 
             You may need to restart the app after granting permission.
             """

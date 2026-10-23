@@ -40,6 +40,9 @@ make app
 # Build, sign with App Store cert, and launch locally for testing
 make dev
 
+# Build, sign, and install into /Applications (use this for everyday local use)
+make install
+
 # Regenerate .xcodeproj from project.yml (done automatically by make)
 make generate-xcodeproj
 
@@ -55,10 +58,12 @@ The project uses a `Makefile` + `xcodebuild` (via XcodeGen) to automate building
 
 **Development:**
 
-| Target     | Description                                         |
-| ---------- | --------------------------------------------------- |
-| `make dev` | Build, sign with App Store cert, and launch locally |
-| `make app` | Build Universal Binary .app bundle                  |
+| Target                   | Description                                                  |
+| ------------------------ | ------------------------------------------------------------ |
+| `make dev`               | Build, sign with App Store cert, and launch locally          |
+| `make install`           | Build, sign, and install into `/Applications`                |
+| `make reset-permissions` | Reset stale Accessibility / Screen Recording grants          |
+| `make app`               | Build **unsigned** Universal Binary .app (permissions won't work) |
 
 **Mac App Store Distribution:**
 
@@ -155,11 +160,28 @@ Sources/MacAIHelperLib/
 
 ## Permissions
 
-The app requires one macOS permission:
+The app requires two macOS permissions:
 
-- **Screen Recording** — For capturing screenshot regions (only needed for the screenshot feature)
+- **Accessibility** — To simulate `⌘C` and copy the selected text (text prompt shortcut)
+- **Screen Recording** — For capturing screenshot regions (screenshot shortcut)
 
-Note: Global keyboard shortcuts use Carbon APIs and do **not** require Accessibility permission.
+Global keyboard shortcuts themselves use Carbon APIs and need no permission.
+
+### Local builds and permissions
+
+macOS binds privacy permissions to the app's **code signature**. An unsigned build
+(`make app`) never matches a granted permission, even though System Settings shows
+the toggle as enabled. For local use always run `make install`, which signs the app
+with the same certificate on every build so grants survive rebuilds.
+
+If permissions still show as missing after installing (e.g. they were granted to a
+differently signed build), reset them and grant again:
+
+```bash
+make reset-permissions
+```
+
+Screen Recording usually requires relaunching the app after it is granted.
 
 ## Privacy
 
