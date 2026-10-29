@@ -18,9 +18,9 @@ public struct MenuBarView: View {
             Divider()
         }
 
-        // Tip Developer
-        Button("Tip Developer ❤️") {
-            AppDelegate.shared?.openTipJar()
+        // Sponsor (opens GitHub Sponsors in default browser)
+        Button("Sponsor ❤️") {
+            NSWorkspace.shared.open(AppConstants.sponsorURL)
         }
 
         Divider()
@@ -39,7 +39,7 @@ public struct MenuBarView: View {
 
         // Privacy Policy (opens in default browser)
         Button("Privacy Policy") {
-            NSWorkspace.shared.open(URL(string: "https://www.castloud.com/privacy.html")!)
+            NSWorkspace.shared.open(AppConstants.privacyPolicyURL)
         }
 
         Divider()

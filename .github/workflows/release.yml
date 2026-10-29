@@ -1,0 +1,194 @@
+# ==============================================================================
+# Build, sign and package Mac AI Helper.
+#
+# - Push a tag `vX.Y.Z` (or `vX.Y.Z-beta.1`) → publish a GitHub Release.
+# - Run manually ("Run workflow", any branch) → download packages from the
+#   run's Artifacts section.
+#
+# Signing uses a persistent self-signed certificate from GitHub Secrets
+# (see scripts/create-signing-cert.sh) and falls back to ad-hoc signing.
+# ==============================================================================
+
+name: Build & Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  APP_NAME: MacAIHelper
+  BUNDLE_ID: com.castloud.MacAIHelper
+  DERIVED_DATA: build/DerivedData
+  RELEASE_DIR: build/release
+  DIST_DIR: build/dist
+  APP_BUNDLE: build/release/MacAIHelper.app
+
+jobs:
+  build:
+    name: Build packages
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install build tools
+        run: brew install xcodegen librsvg
+
+      - name: Resolve version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+              echo "::error::Tag '$GITHUB_REF_NAME' must look like vX.Y.Z or vX.Y.Z-suffix"
+              exit 1
+            fi
+            SHORT_VERSION="${VERSION%%-*}"
+            LABEL="$VERSION"
+          else
+            SHORT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" SupportFiles/Info.plist)
+            BRANCH=$(printf '%s' "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9._-' '-')
+            VERSION="$SHORT_VERSION"
+            LABEL="${SHORT_VERSION}-${BRANCH}-${GITHUB_SHA::7}"
+          fi
+          {
+            echo "VERSION=$VERSION"
+            echo "SHORT_VERSION=$SHORT_VERSION"
+            echo "LABEL=$LABEL"
+          } >> "$GITHUB_ENV"
+          echo "Building $LABEL (CFBundleShortVersionString=$SHORT_VERSION, CFBundleVersion=$GITHUB_RUN_NUMBER)"
+
+      - name: Build universal app
+        run: |
+          xcodegen generate
+          xcodebuild \
+            -project "$APP_NAME.xcodeproj" \
+            -scheme "$APP_NAME" \
+            -configuration Release \
+            -derivedDataPath "$DERIVED_DATA" \
+            -destination 'generic/platform=macOS' \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Assemble app bundle
+        run: |
+          mkdir -p "$RELEASE_DIR"
+          ditto "$DERIVED_DATA/Build/Products/Release/$APP_NAME.app" "$APP_BUNDLE"
+          bash scripts/create-icns.sh SupportFiles/icon.svg "$APP_BUNDLE/Contents/Resources/AppIcon.icns" build/AppIcon.iconset
+          PLIST="$APP_BUNDLE/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $SHORT_VERSION" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$PLIST"
+          lipo -archs "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+
+      - name: Import signing certificate
+        env:
+          P12_BASE64: ${{ secrets.MACOS_SIGNING_CERT_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+        run: |
+          if [[ -z "$P12_BASE64" ]]; then
+            echo "::warning::MACOS_SIGNING_CERT_P12_BASE64 is not set — using ad-hoc signing. Users will lose permissions on every update."
+            echo "SIGN_IDENTITY=-" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 24)
+          echo "SIGN_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+          printf '%s' "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/signing-cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          rm "$RUNNER_TEMP/signing-cert.p12"
+          # Self-signed certificates are untrusted, so the identity is selected by its SHA-1 hash.
+          IDENTITY=$(security find-identity -p codesigning "$KEYCHAIN" | awk '/^ *1\)/ { print $2; exit }')
+          if [[ -z "$IDENTITY" ]]; then
+            echo "::error::No code signing identity found in the imported certificate"
+            exit 1
+          fi
+          echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Sign app
+        run: |
+          if [[ -n "${SIGN_KEYCHAIN:-}" ]]; then
+            codesign --force --deep --timestamp=none --sign "$SIGN_IDENTITY" --keychain "$SIGN_KEYCHAIN" "$APP_BUNDLE"
+          else
+            codesign --force --deep --timestamp=none --sign "$SIGN_IDENTITY" "$APP_BUNDLE"
+          fi
+          codesign --verify --strict --verbose=2 "$APP_BUNDLE"
+          codesign --display --requirements - "$APP_BUNDLE"
+
+      - name: Create packages
+        run: |
+          mkdir -p "$DIST_DIR"
+          PACKAGE_BASE="$DIST_DIR/$APP_NAME-$LABEL"
+
+          ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$PACKAGE_BASE.zip"
+
+          DMG_STAGING=build/dmg
+          mkdir -p "$DMG_STAGING"
+          ditto "$APP_BUNDLE" "$DMG_STAGING/$APP_NAME.app"
+          ln -s /Applications "$DMG_STAGING/Applications"
+          hdiutil create -volname "Mac AI Helper" -srcfolder "$DMG_STAGING" -format UDZO -ov "$PACKAGE_BASE.dmg"
+
+          # Non-relocatable: always install into /Applications instead of
+          # "upgrading" a stray copy of the app found elsewhere on disk.
+          PKG_WORK=build/pkg
+          mkdir -p "$PKG_WORK"
+          pkgbuild --analyze --root "$RELEASE_DIR" "$PKG_WORK/component.plist"
+          plutil -replace 0.BundleIsRelocatable -bool NO "$PKG_WORK/component.plist"
+          pkgbuild \
+            --root "$RELEASE_DIR" \
+            --component-plist "$PKG_WORK/component.plist" \
+            --identifier "$BUNDLE_ID" \
+            --version "$SHORT_VERSION" \
+            --install-location /Applications \
+            "$PKG_WORK/$APP_NAME-component.pkg"
+          productbuild \
+            --distribution SupportFiles/distribution.xml \
+            --resources SupportFiles/installer-resources \
+            --package-path "$PKG_WORK" \
+            "$PACKAGE_BASE.pkg"
+
+          (cd "$DIST_DIR" && shasum -a 256 -- * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.APP_NAME }}-${{ env.LABEL }}
+          path: ${{ env.DIST_DIR }}/*
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$DIST_DIR"/* --clobber
+            exit 0
+          fi
+          PRERELEASE_FLAG=""
+          if [[ "$VERSION" == *-* ]]; then PRERELEASE_FLAG="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" "$DIST_DIR"/* \
+            --verify-tag \
+            --title "Mac AI Helper $VERSION" \
+            --notes-file .github/release-notes.md \
+            --generate-notes \
+            $PRERELEASE_FLAG
+
+      - name: Remove signing keychain
+        if: always() && env.SIGN_KEYCHAIN != ''
+        run: security delete-keychain "$SIGN_KEYCHAIN"

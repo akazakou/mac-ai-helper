@@ -29,7 +29,4 @@ enum Log {
 
     /// UI events (view lifecycle, tab switching, window management)
     static let ui = Logger(subsystem: subsystem, category: "ui")
-
-    /// Tip Jar / StoreKit operations
-    static let tipjar = Logger(subsystem: subsystem, category: "tipjar")
 }

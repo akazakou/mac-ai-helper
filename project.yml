@@ -7,7 +7,8 @@
 #
 # Usage:
 #   xcodegen generate      — creates MacAIHelper.xcodeproj
-#   make dev               — full build + launch via xcodebuild
+# Release builds, signing and packaging run in GitHub Actions
+# (.github/workflows/release.yml).
 # ==============================================================================
 
 name: MacAIHelper
@@ -29,11 +30,6 @@ packages:
   MarkdownUI:
     url: https://github.com/gonzalezreal/swift-markdown-ui
     from: '2.4.0'
-
-# --- File Groups (project-level references, not added to any build phase) ----
-
-fileGroups:
-  - SupportFiles/StoreKitConfiguration.storekit
 
 # --- Build Configurations ----------------------------------------------------
 
@@ -85,25 +81,22 @@ targets:
         SWIFT_VERSION: '6.0'
         PRODUCT_BUNDLE_IDENTIFIER: com.castloud.MacAIHelper
         PRODUCT_NAME: MacAIHelper
-        # Point to existing Info.plist and entitlements without xcodegen overwriting them
+        # Point to existing Info.plist without xcodegen overwriting it
         INFOPLIST_FILE: SupportFiles/Info.plist
-        CODE_SIGN_ENTITLEMENTS: SupportFiles/MacAIHelper.entitlements
         GENERATE_INFOPLIST_FILE: false
         SWIFT_STRICT_CONCURRENCY: complete
         # Universal binary (arm64 + x86_64) for Release
         ARCHS: '$(ARCHS_STANDARD)'
       configs:
-        # Debug: automatic signing for running from Xcode (enables StoreKit sandbox)
+        # Debug: "Sign to Run Locally" (ad-hoc) — no Apple Developer account needed
         Debug:
-          CODE_SIGN_STYLE: Automatic
-          DEVELOPMENT_TEAM: T2MHQ9ZQXG
-          CODE_SIGN_IDENTITY: 'Apple Development'
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: '-'
           ONLY_ACTIVE_ARCH: true
-        # Release: manual signing handled by Makefile
+        # Release: unsigned build; signing is done by the GitHub Actions workflow
         Release:
           CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: ''
-          PROVISIONING_PROFILE_SPECIFIER: ''
           ONLY_ACTIVE_ARCH: false
 
   # Unit test target
@@ -128,7 +121,6 @@ schemes:
         MacAIHelperTests: [test]
     run:
       config: Debug
-      storeKitConfiguration: SupportFiles/StoreKitConfiguration.storekit
     test:
       config: Debug
       targets:

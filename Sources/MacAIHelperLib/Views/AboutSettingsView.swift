@@ -39,7 +39,7 @@ struct AboutSettingsView: View {
                     Divider()
 
                     // Copyright
-                    Text("© 2026 Castloud. All rights reserved.")
+                    Text("© 2026 Castloud. Licensed under GPL-3.0.")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -121,12 +121,16 @@ struct AboutSettingsView: View {
                 .font(.headline)
 
             HStack(spacing: 24) {
-                Link(destination: URL(string: "https://www.castloud.com/privacy.html")!) {
+                Link(destination: AppConstants.privacyPolicyURL) {
                     Label("Privacy Policy", systemImage: "hand.raised")
                 }
 
-                Link(destination: URL(string: "https://www.castloud.com/eula.html")!) {
-                    Label("Terms of Use", systemImage: "doc.text")
+                Link(destination: AppConstants.licenseURL) {
+                    Label("License (GPL-3.0)", systemImage: "doc.text")
+                }
+
+                Link(destination: AppConstants.sourceCodeURL) {
+                    Label("Source Code", systemImage: "chevron.left.forwardslash.chevron.right")
                 }
             }
             .font(.callout)

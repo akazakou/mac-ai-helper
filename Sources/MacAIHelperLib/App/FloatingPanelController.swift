@@ -46,10 +46,10 @@ final class FloatingPanelController {
 
     // MARK: - Size Persistence Helpers
 
-    /// Returns the saved panel size from App Group UserDefaults, clamped to min/max bounds,
+    /// Returns the saved panel size from UserDefaults, clamped to min/max bounds,
     /// or the default size if nothing was saved yet.
     private func restoredPanelSize() -> NSSize {
-        let defaults = AppConstants.sharedDefaults
+        let defaults = UserDefaults.standard
         let savedWidth = defaults.double(forKey: Self.panelWidthKey)
         let savedHeight = defaults.double(forKey: Self.panelHeightKey)
 
@@ -63,10 +63,10 @@ final class FloatingPanelController {
         return NSSize(width: clampedWidth, height: clampedHeight)
     }
 
-    /// Persists the current panel frame size to App Group UserDefaults.
+    /// Persists the current panel frame size to UserDefaults.
     private func savePanelSize() {
         guard let size = panel?.frame.size else { return }
-        let defaults = AppConstants.sharedDefaults
+        let defaults = UserDefaults.standard
         defaults.set(Double(size.width), forKey: Self.panelWidthKey)
         defaults.set(Double(size.height), forKey: Self.panelHeightKey)
     }

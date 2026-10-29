@@ -4,18 +4,15 @@
 import Foundation
 
 enum AppConstants {
-    /// App Group identifier following Apple's naming convention:
-    /// teamid.group.com.yourcompany.yourapp
-    static let appGroupIdentifier = "T2MHQ9ZQXG.group.com.castloud.MacAIHelper"
+    /// Public GitHub repository with source code and releases
+    static let sourceCodeURL = URL(string: "https://github.com/akazakou/mac-ai-helper")!
 
-    /// Shared UserDefaults backed by the App Group container.
-    /// Falls back to `.standard` if the suite cannot be created (should never happen at runtime).
-    /// UserDefaults is thread-safe; the `nonisolated(unsafe)` suppression is safe here.
-    nonisolated(unsafe) static let sharedDefaults: UserDefaults = {
-        guard let defaults = UserDefaults(suiteName: appGroupIdentifier) else {
-            Log.settings.error("Failed to create UserDefaults for App Group \(appGroupIdentifier). Falling back to standard.")
-            return .standard
-        }
-        return defaults
-    }()
+    /// GitHub Sponsors page for voluntary support
+    static let sponsorURL = URL(string: "https://github.com/sponsors/akazakou")!
+
+    /// Privacy policy published in the repository
+    static let privacyPolicyURL = sourceCodeURL.appending(path: "blob/master/PRIVACY.md")
+
+    /// GPL-3.0 license text published in the repository
+    static let licenseURL = sourceCodeURL.appending(path: "blob/master/LICENSE")
 }

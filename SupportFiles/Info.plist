@@ -18,7 +18,7 @@
     <string>NSApplication</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
-    <!-- App Store category: Utilities -->
+    <!-- Finder category: Utilities -->
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <!-- No Dock icon — menu bar only -->
@@ -30,8 +30,5 @@
     <!-- Accessibility permission for simulating Cmd+C to copy selected text -->
     <key>NSAccessibilityUsageDescription</key>
     <string>Mac AI Helper needs Accessibility permission to copy selected text from other applications for AI processing.</string>
-    <!-- App do not uses encryption -->
-    <key>ITSAppUsesNonExemptEncryption</key>
-    <false/>
 </dict>
 </plist>
