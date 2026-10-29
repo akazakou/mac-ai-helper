@@ -61,7 +61,7 @@ Each run produces a Universal (arm64 + x86_64) app packaged as **DMG**, **PKG** 
 | --- | --- |
 | Push tag `vX.Y.Z` | GitHub Release `vX.Y.Z` with all packages |
 | Push tag `vX.Y.Z-beta.1` (any `-suffix`) | Same, marked as pre-release |
-| **Actions → Build & Release → Run workflow** (any branch) | Test build; download packages from the run's **Artifacts** |
+| **Actions → Build & Release → Run workflow** (any branch) | Test build; download the `.dmg`, `.pkg` and `.zip` (one artifact each) from the run's **Artifacts** |
 
 ```bash
 git tag v1.2.0

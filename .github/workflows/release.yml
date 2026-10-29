@@ -181,12 +181,28 @@ jobs:
             "$PACKAGE_BASE.pkg"
 
           (cd "$DIST_DIR" && shasum -a 256 -- * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          echo "PACKAGE_BASE=$PACKAGE_BASE" >> "$GITHUB_ENV"
 
-      - name: Upload build artifacts
+      # One un-zipped artifact per package: `archive: false` uploads a single file as-is.
+      - name: Upload DMG
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.APP_NAME }}-${{ env.LABEL }}
-          path: ${{ env.DIST_DIR }}/*
+          path: ${{ env.PACKAGE_BASE }}.dmg
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload PKG
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.PACKAGE_BASE }}.pkg
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.PACKAGE_BASE }}.zip
+          archive: false
           if-no-files-found: error
 
       - name: Publish GitHub Release
