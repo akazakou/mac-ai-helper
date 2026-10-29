@@ -2,6 +2,7 @@
 // Floating popup showing the prompt list, each prompt labelled with its own model.
 // Appears when the user triggers a text or screenshot shortcut.
 
+import AppKit
 import SwiftUI
 
 struct PromptPopupView: View {
@@ -10,6 +11,14 @@ struct PromptPopupView: View {
 
     /// Callback to dismiss the popup
     var onDismiss: (() -> Void)?
+
+    /// Callback fired when a prompt starts processing (popup switches to response mode)
+    var onResponseStarted: (() -> Void)?
+
+    /// Pin is offered only while waiting for or showing a response
+    private var isResponseVisible: Bool {
+        appState.isLoading || appState.showingResult
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,6 +45,11 @@ struct PromptPopupView: View {
         .task {
             await viewModel.loadModelsIfNeeded()
         }
+        .onChange(of: appState.isLoading) { _, isLoading in
+            if isLoading {
+                onResponseStarted?()
+            }
+        }
     }
 
     // MARK: - Header
@@ -50,6 +64,10 @@ struct PromptPopupView: View {
 
             Spacer()
 
+            if isResponseVisible {
+                pinButton
+            }
+
             // Close button
             Button {
                 onDismiss?()
@@ -60,6 +78,20 @@ struct PromptPopupView: View {
             .buttonStyle(.plain)
         }
         .padding(12)
+        // The header doubles as a drag handle; SwiftUI content covers the whole
+        // window, so isMovableByWindowBackground never sees a background click.
+        .background(WindowDragArea())
+    }
+
+    private var pinButton: some View {
+        Button {
+            appState.isPopupPinned.toggle()
+        } label: {
+            Image(systemName: appState.isPopupPinned ? "pin.fill" : "pin")
+                .foregroundStyle(appState.isPopupPinned ? Color.accentColor : .secondary)
+        }
+        .buttonStyle(.plain)
+        .help(appState.isPopupPinned ? "Unpin window" : "Pin window to keep it open when switching apps")
     }
 
     // MARK: - Prompt List
@@ -152,6 +184,22 @@ struct PromptPopupView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Window Drag Area
+
+/// Transparent view that moves its window when dragged.
+/// ponytail: AppKit bridge because WindowDragGesture requires macOS 15; swap once the target is raised.
+private struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { DragView() }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private final class DragView: NSView {
+        override func mouseDown(with event: NSEvent) {
+            window?.performDrag(with: event)
+        }
     }
 }
 

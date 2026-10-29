@@ -255,6 +255,9 @@ public final class AppState {
     public var lastError: String?
     public var showingResult = false
 
+    /// Whether the user pinned the popup so it stays open when focus moves elsewhere
+    public var isPopupPinned = false
+
     /// Currently selected tab in the Settings window
     public var selectedSettingsTab: SettingsTab = .prompts
 

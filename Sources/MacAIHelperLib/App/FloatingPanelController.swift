@@ -16,6 +16,15 @@ final class FloatingPanelController {
     /// Local event monitor for ESC key to dismiss the panel
     private var escKeyMonitor: Any?
 
+    /// Observer that auto-dismisses the panel when it loses focus
+    private var resignKeyObserver: NSObjectProtocol?
+
+    /// Delay before auto-dismissing on focus loss, so clicks back into the panel don't close it
+    private nonisolated static let focusLossDismissDelay: TimeInterval = 0.2
+
+    /// Key code of the ESC key
+    private static let escKeyCode: UInt16 = 53
+
     // MARK: - Panel Size Constants & Persistence Keys
 
     /// Default initial panel size (used when no saved size exists)
@@ -74,6 +83,9 @@ final class FloatingPanelController {
             appState: appState,
             onDismiss: { [weak self] in
                 self?.dismissPopup()
+            },
+            onResponseStarted: { [weak self] in
+                self?.enterResponseMode()
             }
         )
 
@@ -93,6 +105,10 @@ final class FloatingPanelController {
 
         panel.isFloatingPanel = true
         panel.level = .floating
+        // Title is hidden in the panel but names the window in Mission Control
+        panel.title = "Mac AI Helper"
+        // A pinned panel must stay visible while another app is active
+        panel.hidesOnDeactivate = false
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.standardWindowButton(.closeButton)?.isHidden = true
@@ -123,27 +139,43 @@ final class FloatingPanelController {
 
         self.panel = panel
 
-        // Monitor ESC key to dismiss the panel
-        escKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 { // ESC key
-                self?.dismissPopup()
-                return nil // Consume the event
-            }
-            return event
-        }
+        monitorEscKey()
+        observeFocusLoss(of: panel)
+    }
 
-        // Observe when the panel loses focus to auto-dismiss
-        NotificationCenter.default.addObserver(
+    /// Turns the popup into a regular app window once a prompt is running:
+    /// Dock icon, Cmd+Tab and Mission Control entries, no longer always on top.
+    private func enterResponseMode() {
+        guard let panel else { return }
+        NSApp.setActivationPolicy(.regular)
+        panel.isFloatingPanel = false
+        panel.level = .normal
+        panel.collectionBehavior = [.managed, .participatesInCycle]
+        NSApp.activate()
+        panel.makeKeyAndOrderFront(nil)
+    }
+
+    /// Dismisses the panel when ESC is pressed.
+    private func monitorEscKey() {
+        escKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == Self.escKeyCode else { return event }
+            self?.dismissPopup()
+            return nil // Consume the event
+        }
+    }
+
+    /// Auto-dismisses the panel when it loses focus, unless the user pinned it.
+    private func observeFocusLoss(of panel: NSPanel) {
+        resignKeyObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
             object: panel,
             queue: .main
         ) { [weak self] _ in
-            // Small delay to allow clicking within the panel
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.focusLossDismissDelay) {
                 // Only dismiss if panel is still not key (user didn't click back)
-                if self?.panel?.isKeyWindow == false {
-                    self?.dismissPopup()
-                }
+                guard let self, self.panel?.isKeyWindow == false, !self.appState.isPopupPinned
+                else { return }
+                self.dismissPopup()
             }
         }
     }
@@ -156,14 +188,23 @@ final class FloatingPanelController {
             escKeyMonitor = nil
         }
 
+        if let observer = resignKeyObserver {
+            NotificationCenter.default.removeObserver(observer)
+            resignKeyObserver = nil
+        }
+
         // Persist the current panel size before closing
         savePanelSize()
 
         panel?.close()
         panel = nil
 
+        // Back to menu-bar-only: no Dock icon
+        NSApp.setActivationPolicy(.accessory)
+
         // Reset transient state
         appState.isLoading = false
         appState.showingResult = false
+        appState.isPopupPinned = false
     }
 }
