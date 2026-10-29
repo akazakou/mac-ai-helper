@@ -35,6 +35,10 @@ Package.resolved
 .idea/
 *.code-workspace
 
+# Signing material (never commit)
+*.p12
+*.pem
+
 # Misc
 *.log
 *.tmp

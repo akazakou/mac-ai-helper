@@ -2,10 +2,12 @@
 
 A native macOS menu bar utility that captures selected text or screenshots via global keyboard shortcuts, presents a popup with predefined AI prompts, sends the content to a configured AI provider, and displays the response with copy functionality.
 
+Free and open source under [GPL-3.0](LICENSE).
+
 ## Features
 
 - **Menu Bar Only** — Lives exclusively in the macOS menu bar (no Dock icon)
-- **Global Shortcuts** — Trigger from any application (sandbox-compatible via Carbon hotkeys)
+- **Global Shortcuts** — Trigger from any application (Carbon hotkeys, no permission needed)
   - `⇧⌘C` (`Cmd+Shift+C`) — Capture selected text and show prompt popup
   - `⌃⌘C` (`Ctrl+Cmd+C`) — Capture a screenshot region and show prompt popup
 - **Multiple AI Providers** — Supports OpenAI, Anthropic (Claude), Google Gemini, and OpenRouter
@@ -14,110 +16,16 @@ A native macOS menu bar utility that captures selected text or screenshots via g
 - **Custom Prompts** — Configure unlimited AI prompt templates
 - **Secure Key Storage** — API keys stored in macOS Keychain
 - **Native UI** — Built with SwiftUI, uses floating panels for the popup
-- **Tip Jar** — Optional in-app purchases to support development (StoreKit 2)
-- **App Sandbox** — Fully sandboxed for Mac App Store distribution
-- **Persistent Settings** — Settings, API keys, and prompts persist across App Store updates
 
-## Requirements
+## Installation
 
-- macOS 14+ (Sonoma) — Apple Silicon and Intel
-- Swift 6.0+
-- Xcode 16+ (for building)
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) — generates `.xcodeproj` from `project.yml` (`brew install xcodegen`)
-- Apple Developer Program membership (for signing and distribution)
+1. Download the latest `.dmg`, `.pkg` or `.zip` from [Releases](https://github.com/akazakou/mac-ai-helper/releases) (Universal — Apple Silicon and Intel, macOS 14+)
+2. Install into `/Applications`
+3. First launch: the app is not notarized by Apple, so macOS blocks it once per downloaded version. Open **System Settings → Privacy & Security** and click **Open Anyway**, or run:
 
-## Building
-
-The build system uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to generate a `.xcodeproj` from `project.yml`, then builds with `xcodebuild`. This ensures SPM dependency resource bundles (e.g. KeyboardShortcuts localizations) are correctly placed inside `Contents/Resources/` in the `.app` bundle.
-
-```bash
-# Install build dependency (one-time)
-brew install xcodegen
-
-# Build Universal .app bundle (arm64 + x86_64)
-make app
-
-# Build, sign with App Store cert, and launch locally for testing
-make dev
-
-# Build, sign, and install into /Applications (use this for everyday local use)
-make install
-
-# Regenerate .xcodeproj from project.yml (done automatically by make)
-make generate-xcodeproj
-
-# See all available targets
-make help
-```
-
-## Release & Packaging
-
-The project uses a `Makefile` + `xcodebuild` (via XcodeGen) to automate building, signing, and packaging. The `.xcodeproj` is generated from `project.yml` at build time — it is not committed to git. All builds are signed with App Store certificates to ensure consistent sandbox container and Keychain access across builds.
-
-### Build Targets
-
-**Development:**
-
-| Target                   | Description                                                  |
-| ------------------------ | ------------------------------------------------------------ |
-| `make dev`               | Build, sign with App Store cert, and launch locally          |
-| `make install`           | Build, sign, and install into `/Applications`                |
-| `make reset-permissions` | Reset stale Accessibility / Screen Recording grants          |
-| `make app`               | Build **unsigned** Universal Binary .app (permissions won't work) |
-
-**Mac App Store Distribution:**
-
-| Target                 | Description                                    |
-| ---------------------- | ---------------------------------------------- |
-| `make appstore`        | Full pipeline: clean → icon → sign → pkg       |
-| `make appstore-icon`   | Generate 1024×1024 App Store icon PNG from SVG |
-| `make appstore-sign`   | Sign .app with App Store certificate           |
-| `make appstore-pkg`    | Create signed .pkg for App Store submission    |
-| `make appstore-upload` | Upload .pkg to App Store Connect               |
-
-**Utilities:**
-
-| Target                    | Description                                |
-| ------------------------- | ------------------------------------------ |
-| `make generate-xcodeproj` | Regenerate `.xcodeproj` from `project.yml` |
-| `make icon`               | Generate AppIcon.icns from SVG             |
-| `make check-identity`     | Verify signing identities are in keychain  |
-| `make store-credentials`  | Store credentials in keychain              |
-| `make clean`              | Remove all build artifacts                 |
-
-### Mac App Store Submission
-
-**Prerequisites:**
-
-1. An [Apple Developer Program](https://developer.apple.com/programs/) membership
-2. **Mac App Distribution** + **Mac Installer Distribution** certificates
-3. App ID registered with bundle ID `com.castloud.MacAIHelper`
-4. App Store provisioning profile
-5. App listing created in [App Store Connect](https://appstoreconnect.apple.com)
-
-**Submit to App Store:**
-
-```bash
-make appstore
-```
-
-Then upload via Transporter.app or:
-
-```bash
-make appstore-upload APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
-```
-
-**Test StoreKit locally:**
-
-The project includes a StoreKit configuration file at `SupportFiles/StoreKitConfiguration.storekit` for local testing of in-app purchases without needing App Store Connect sandbox.
-
-### Output Artifacts
-
-After `make appstore`, the following are produced in `build/`:
-
-- `build/release/MacAIHelper.app` — Signed Universal Binary application
-- `build/MacAIHelper-X.Y.Z-appstore.pkg` — Signed .pkg for App Store submission
-- `build/AppStoreIcon.png` — 1024×1024 App Store icon
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/MacAIHelper.app
+   ```
 
 ## Setup
 
@@ -126,12 +34,74 @@ After `make appstore`, the following are produced in `build/`:
 3. **Configure prompts** — Settings → Prompts tab to add, edit, or reorder prompts
 4. **Start using** — Select text in any app, press `⇧⌘C`, pick a prompt, and get AI responses!
 
+## Requirements (development)
+
+- macOS 14+ (Sonoma)
+- Xcode 16+ / Swift 6.0+
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) — generates `.xcodeproj` from `project.yml` (`brew install xcodegen`)
+
+No Apple Developer Program membership is required.
+
+## Development
+
+```bash
+swift build                 # compile
+swift test                  # run unit tests
+xcodegen generate && open MacAIHelper.xcodeproj   # run/debug from Xcode (Debug is "Sign to Run Locally")
+```
+
+The `.xcodeproj` is generated from `project.yml` and is not committed to git.
+
+## Building & Releasing (GitHub Actions)
+
+All release builds, signing and packaging run in [`.github/workflows/release.yml`](.github/workflows/release.yml) on `macos-latest`.
+Each run produces a Universal (arm64 + x86_64) app packaged as **DMG**, **PKG** and **ZIP**, plus `SHA256SUMS.txt`.
+
+| Trigger | Result |
+| --- | --- |
+| Push tag `vX.Y.Z` | GitHub Release `vX.Y.Z` with all packages |
+| Push tag `vX.Y.Z-beta.1` (any `-suffix`) | Same, marked as pre-release |
+| **Actions → Build & Release → Run workflow** (any branch) | Test build; download packages from the run's **Artifacts** |
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+Version mapping: `CFBundleShortVersionString` comes from the tag without the `-suffix` (branch builds use the value in `SupportFiles/Info.plist`); `CFBundleVersion` is the workflow run number.
+
+### Signing certificate
+
+Releases are signed with a persistent **self-signed** code-signing certificate stored in GitHub Secrets.
+macOS ties Accessibility / Screen Recording grants and Keychain access to the signing certificate,
+so a stable certificate keeps users' permissions across updates. It does not replace Apple notarization:
+Gatekeeper still asks users to confirm each downloaded version once.
+
+One-time setup:
+
+```bash
+scripts/create-signing-cert.sh            # writes ~/.mac-ai-helper-signing/
+base64 -i ~/.mac-ai-helper-signing/signing-cert.p12 | gh secret set MACOS_SIGNING_CERT_P12_BASE64
+gh secret set MACOS_SIGNING_CERT_PASSWORD < ~/.mac-ai-helper-signing/signing-cert-password.txt
+```
+
+| Secret | Content |
+| --- | --- |
+| `MACOS_SIGNING_CERT_P12_BASE64` | Base64-encoded `.p12` (certificate + private key) |
+| `MACOS_SIGNING_CERT_PASSWORD` | `.p12` password |
+
+- Back up `~/.mac-ai-helper-signing/` in a password manager. Anyone holding the `.p12` can sign apps that inherit users' permission grants.
+- Replacing the certificate resets every user's permissions once.
+- Without the secrets (e.g. in forks) the workflow falls back to ad-hoc signing and prints a warning; permissions then reset on every update.
+
 ## Architecture
 
 ```
 project.yml                 # XcodeGen project spec (generates .xcodeproj)
 Package.swift               # SPM package manifest (dependency declarations)
-Makefile                    # Build, sign, and package automation
+.github/workflows/          # Build, sign, package and release pipeline
+scripts/                    # Icon generation, signing certificate creation
+SupportFiles/               # Info.plist, icons, installer (.pkg) resources
 Sources/MacAIHelper/
 ├── App/                    # App entry point (@main)
 Sources/MacAIHelperLib/
@@ -150,13 +120,12 @@ Sources/MacAIHelperLib/
 - **SettingsService** — JSON-based settings persistence in Application Support
 - **FloatingPanelController** — NSPanel-based floating popup window
 - **ScreenCaptureService** — Interactive screen region capture via ScreenCaptureKit
-- **TipJarService** — StoreKit 2 consumable in-app purchases
 
 ### Data Persistence
 
-- **Settings** (`settings.json`) — Stored in the sandboxed Application Support directory. Persists across App Store updates because the sandbox container is tied to the bundle ID and team signing identity.
-- **API Keys** — Stored in macOS Keychain, scoped to the app's code signing identity. Persists across updates as long as builds are signed with the same team certificate.
-- **Keyboard Shortcuts** — Managed by the KeyboardShortcuts framework via UserDefaults.
+- **Settings** (`settings.json`) — Stored in `~/Library/Application Support/MacAIHelper/`.
+- **API Keys** — Stored in macOS Keychain. Access survives updates as long as releases are signed with the same certificate.
+- **Keyboard Shortcuts & panel size** — Stored in the app's UserDefaults.
 
 ## Permissions
 
@@ -167,31 +136,29 @@ The app requires two macOS permissions:
 
 Global keyboard shortcuts themselves use Carbon APIs and need no permission.
 
-### Local builds and permissions
-
-macOS binds privacy permissions to the app's **code signature**. An unsigned build
-(`make app`) never matches a granted permission, even though System Settings shows
-the toggle as enabled. For local use always run `make install`, which signs the app
-with the same certificate on every build so grants survive rebuilds.
-
-If permissions still show as missing after installing (e.g. they were granted to a
-differently signed build), reset them and grant again:
+macOS binds privacy permissions to the app's **code signature**. If permissions show as
+granted but don't work (e.g. they were granted to a differently signed build), reset and grant again:
 
 ```bash
-make reset-permissions
+tccutil reset Accessibility com.castloud.MacAIHelper
+tccutil reset ScreenCapture com.castloud.MacAIHelper
 ```
 
 Screen Recording usually requires relaunching the app after it is granted.
 
 ## Privacy
 
-Privacy policy: [www.castloud.com/privacy.html](https://www.castloud.com/privacy.html)
+See [PRIVACY.md](PRIVACY.md).
 
 - No data collected or transmitted to Castloud servers
 - API keys stored locally in macOS Keychain
 - Content sent directly to user-configured AI providers
 - No analytics or tracking
 
+## Support
+
+If the app is useful to you, consider [sponsoring development](https://github.com/sponsors/akazakou) ❤️
+
 ## License
 
-Private project. © 2026 Castloud.
+[GNU General Public License v3.0](LICENSE). © 2026 Castloud.

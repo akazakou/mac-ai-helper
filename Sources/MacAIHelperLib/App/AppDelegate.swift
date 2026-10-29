@@ -30,9 +30,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Settings window (retained to keep it alive)
     private var settingsWindow: NSWindow?
 
-    /// Tip Jar window (retained to keep it alive)
-    private var tipJarWindow: NSWindow?
-
     public func applicationDidFinishLaunching(_ notification: Notification) {
         Log.general.info("Application did finish launching")
         Self.shared = self
@@ -103,43 +100,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    // MARK: - Tip Jar Window
-
-    /// Opens the Tip Jar window, creating it if necessary.
-    public func openTipJar() {
-        if let window = tipJarWindow, window.isVisible {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        let tipJarView = TipJarView { [weak self] in
-            self?.tipJarWindow?.orderOut(nil)
-        }
-
-        let hostingView = NSHostingView(rootView: tipJarView)
-
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 420),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Tip Developer"
-        window.contentView = hostingView
-        window.center()
-        window.isReleasedWhenClosed = false
-        window.makeKeyAndOrderFront(nil)
-
-        self.tipJarWindow = window
-
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
     // MARK: - Hotkey Service Setup
 
     /// Initializes and starts global hotkey monitoring using KeyboardShortcuts.
-    /// No Accessibility permission is required — Carbon hotkeys work in sandbox.
+    /// No Accessibility permission is required for Carbon hotkeys.
     private func setupHotkeyService() {
         hotkeyService = HotkeyService()
         hotkeyService?.onTextShortcut = { [weak self] in
