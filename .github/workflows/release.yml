@@ -78,7 +78,6 @@ jobs:
             -configuration Release \
             -derivedDataPath "$DERIVED_DATA" \
             -destination 'generic/platform=macOS' \
-            -quiet \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Assemble app bundle
@@ -112,6 +111,12 @@ jobs:
           security import "$RUNNER_TEMP/signing-cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
           rm "$RUNNER_TEMP/signing-cert.p12"
+          # codesign resolves signing identities through the user keychain search
+          # list (--keychain alone is not enough), so prepend the temporary keychain.
+          EXISTING_KEYCHAINS=$(security list-keychains -d user | tr -d '"' | xargs)
+          security list-keychains -d user -s "$KEYCHAIN" $EXISTING_KEYCHAINS
+          security list-keychains -d user
+          security find-identity -p codesigning
           # Self-signed certificates are untrusted, so the identity is selected by its SHA-1 hash.
           IDENTITY=$(security find-identity -p codesigning "$KEYCHAIN" | awk '/^ *1\)/ { print $2; exit }')
           if [[ -z "$IDENTITY" ]]; then
