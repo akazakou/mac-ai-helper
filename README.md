@@ -54,7 +54,7 @@ The `.xcodeproj` is generated from `project.yml` and is not committed to git.
 
 ## Building & Releasing (GitHub Actions)
 
-All release builds, signing and packaging run in [`.github/workflows/release.yml`](.github/workflows/release.yml) on `macos-latest`.
+All release builds, signing and packaging run in [`.github/workflows/release.yml`](.github/workflows/release.yml) on the maintainer's self-hosted Apple Silicon runner.
 Each run produces a Universal (arm64 + x86_64) app packaged as **DMG**, **PKG** and **ZIP**, plus `SHA256SUMS.txt`.
 
 | Trigger | Result |
@@ -93,6 +93,39 @@ gh secret set MACOS_SIGNING_CERT_PASSWORD < ~/.mac-ai-helper-signing/signing-cer
 - Back up `~/.mac-ai-helper-signing/` in a password manager. Anyone holding the `.p12` can sign apps that inherit users' permission grants.
 - Replacing the certificate resets every user's permissions once.
 - Without the secrets (e.g. in forks) the workflow falls back to ad-hoc signing and prints a warning; permissions then reset on every update.
+
+### Self-hosted runner
+
+GitHub-hosted macOS runners are often capacity-constrained, so the workflow targets a self-hosted
+runner with labels `self-hosted, macOS, ARM64, mac-ai-helper-release`. It runs as a LaunchAgent in
+the maintainer's login session (signing needs the user keychain) and starts automatically at login.
+With FileVault enabled, that is right after the first unlock following a boot.
+
+Install / register (Apple Silicon, latest release from [actions/runner](https://github.com/actions/runner/releases)):
+
+```bash
+mkdir -p ~/actions-runner && cd ~/actions-runner
+curl -fsSL -o runner.tar.gz https://github.com/actions/runner/releases/download/v<VERSION>/actions-runner-osx-arm64-<VERSION>.tar.gz
+tar xzf runner.tar.gz && rm runner.tar.gz
+./config.sh --unattended --url https://github.com/akazakou/mac-ai-helper \
+  --token "$(gh api -X POST repos/akazakou/mac-ai-helper/actions/runners/registration-token --jq .token)" \
+  --name "$(hostname -s)" --labels mac-ai-helper-release --work _work --replace
+./svc.sh install && ./svc.sh start
+```
+
+Status / logs: `./svc.sh status`, `~/Library/Logs/actions.runner.akazakou-mac-ai-helper.*/`.
+
+Remove:
+
+```bash
+cd ~/actions-runner && ./svc.sh uninstall
+./config.sh remove --token "$(gh api -X POST repos/akazakou/mac-ai-helper/actions/runners/remove-token --jq .token)"
+```
+
+Security: jobs run with the runner user's privileges. The workflow only starts on tag pushes and
+manual runs by collaborators, and fork PRs from all outside contributors need approval — never add
+`pull_request` triggers that target this runner.
+
 
 ## Architecture
 

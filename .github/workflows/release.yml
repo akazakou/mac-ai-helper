@@ -7,6 +7,10 @@
 #
 # Signing uses a persistent self-signed certificate from GitHub Secrets
 # (see scripts/create-signing-cert.sh) and falls back to ad-hoc signing.
+#
+# Runs on the maintainer's self-hosted Apple Silicon runner (label
+# `mac-ai-helper-release`). Only tag pushes and manual runs by collaborators
+# can start it — never add `pull_request` triggers to this workflow.
 # ==============================================================================
 
 name: Build & Release
@@ -38,13 +42,20 @@ env:
 jobs:
   build:
     name: Build packages
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, ARM64, mac-ai-helper-release]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Self-hosted runner: install only what is missing, never upgrade the host's Homebrew.
       - name: Install build tools
-        run: brew install xcodegen librsvg
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
+        run: |
+          command -v xcodegen > /dev/null || brew install xcodegen
+          command -v rsvg-convert > /dev/null || brew install librsvg
 
       - name: Resolve version
         run: |
@@ -105,6 +116,8 @@ jobs:
           KEYCHAIN_PASSWORD=$(openssl rand -base64 24)
           echo "SIGN_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
           printf '%s' "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-cert.p12"
+          # A killed previous job on the self-hosted runner may have left the keychain behind.
+          security delete-keychain "$KEYCHAIN" 2> /dev/null || true
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 3600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
