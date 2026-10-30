@@ -1,8 +1,24 @@
 # Mac AI Helper
 
+<p align="center">
+  <img src="docs/media/hero.png" alt="Mac AI Helper: select text or a screen region, press a shortcut, and get an AI answer" width="100%">
+</p>
+
 A native macOS menu bar utility that captures selected text or screenshots via global keyboard shortcuts, presents a popup with predefined AI prompts, sends the content to a configured AI provider, and displays the response with copy functionality.
 
 Free and open source under [GPL-3.0](LICENSE).
+
+## How it works
+
+<p align="center">
+  <img src="docs/media/mac-ai-helper-demo.gif" alt="Demo: capture a screen region, pick the Fact Check It prompt, and read the answer" width="760">
+</p>
+
+1. **Capture** — select text and press `⇧⌘C`, or press `⌃⌘C` and drag over any part of the screen.
+2. **Pick a prompt** — translate, rewrite, answer a question, fact check, or your own prompt.
+3. **Get the answer** — read the result in a floating window, copy it with one click, or pin the window.
+
+![How it works](docs/media/how-it-works.png)
 
 ## Features
 
@@ -16,6 +32,8 @@ Free and open source under [GPL-3.0](LICENSE).
 - **Custom Prompts** — Configure unlimited AI prompt templates
 - **Secure Key Storage** — API keys stored in macOS Keychain
 - **Native UI** — Built with SwiftUI, uses floating panels for the popup
+
+![Custom prompts, your own API keys, and global shortcuts](docs/media/customize.png)
 
 ## Installation
 
