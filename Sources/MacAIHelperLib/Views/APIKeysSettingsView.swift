@@ -99,6 +99,7 @@ struct APIKeysSettingsView: View {
         case .anthropic: "sparkle"
         case .gemini: "diamond"
         case .openRouter: "network"
+        case .googleTranslate, .googleTranslateFree: "character.bubble"
         }
     }
 

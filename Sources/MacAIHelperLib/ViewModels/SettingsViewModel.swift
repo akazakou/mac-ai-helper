@@ -36,6 +36,11 @@ final class SettingsViewModel {
         appState.availableModels
     }
 
+    /// Model preselected for a new prompt
+    var defaultModel: AIModel? {
+        appState.defaultModel
+    }
+
     /// Whether provider model lists are currently being fetched
     var isLoadingModels: Bool {
         appState.isLoadingModels

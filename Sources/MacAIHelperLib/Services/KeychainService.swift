@@ -141,7 +141,9 @@ struct KeychainService: Sendable {
     }
 
     /// Retrieves the first available API key for a given provider from settings.
+    /// Keyless providers get an empty key.
     static func apiKey(for provider: AIProvider, entries: [APIKeyEntry]) throws -> String {
+        guard provider.requiresAPIKey else { return "" }
         guard let entry = entries.first(where: { $0.provider == provider }) else {
             throw AppError.noAPIKey(provider)
         }
@@ -152,11 +154,13 @@ struct KeychainService: Sendable {
     }
 
     /// Retrieves the API key for a provider from a pre-loaded keys dictionary.
+    /// Keyless providers get an empty key.
     static func apiKey(
         for provider: AIProvider,
         entries: [APIKeyEntry],
         cachedKeys: [String: String]
     ) throws -> String {
+        guard provider.requiresAPIKey else { return "" }
         guard let entry = entries.first(where: { $0.provider == provider }) else {
             throw AppError.noAPIKey(provider)
         }

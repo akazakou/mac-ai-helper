@@ -11,6 +11,8 @@ struct AIServiceRouter: Sendable {
         case .anthropic: AnthropicService()
         case .gemini: GeminiService()
         case .openRouter: OpenRouterService()
+        case .googleTranslate: GoogleTranslateService()
+        case .googleTranslateFree: GoogleTranslateFreeService()
         }
     }
 

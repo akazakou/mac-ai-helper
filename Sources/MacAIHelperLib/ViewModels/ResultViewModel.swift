@@ -21,6 +21,11 @@ final class ResultViewModel {
         appState.aiResponse ?? ""
     }
 
+    /// Whether the response is plain text (a translation) rather than Markdown
+    var isPlainText: Bool {
+        appState.isResponsePlainText
+    }
+
     /// Whether the app is waiting for an AI response
     var isLoading: Bool {
         appState.isLoading

@@ -34,16 +34,28 @@ struct ResultView: View {
 
     private var responseView: some View {
         ScrollView {
-            Markdown(viewModel.responseText)
+            responseContent
                 .textSelection(.enabled)
-                .markdownTextStyle(\.text) {
-                    FontSize(NSFont.systemFontSize)
-                }
-                .markdownTheme(.gitHub)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
         }
         .frame(minHeight: 100, maxHeight: .infinity)
+    }
+
+    /// Translations are shown verbatim: Markdown would join their lines and
+    /// treat characters such as * or # as formatting.
+    @ViewBuilder
+    private var responseContent: some View {
+        if viewModel.isPlainText {
+            Text(viewModel.responseText)
+                .font(.system(size: NSFont.systemFontSize))
+        } else {
+            Markdown(viewModel.responseText)
+                .markdownTextStyle(\.text) {
+                    FontSize(NSFont.systemFontSize)
+                }
+                .markdownTheme(.gitHub)
+        }
     }
 
     // MARK: - Loading View

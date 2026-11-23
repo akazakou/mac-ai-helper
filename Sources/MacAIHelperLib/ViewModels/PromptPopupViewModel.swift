@@ -31,10 +31,11 @@ final class PromptPopupViewModel {
     /// Executes a prompt with the captured text content.
     func selectPrompt(_ prompt: Prompt) async {
         guard let text = appState.capturedText else { return }
-        let resolvedPrompt = prompt.resolved(with: text)
         await run(prompt) { model, apiKey in
-            try await AIServiceRouter.sendPrompt(
-                resolvedPrompt, model: model.id, provider: model.provider, apiKey: apiKey,
+            // Translation services translate the captured text itself, not an instruction about it.
+            let content = model.provider.isTranslationService ? text : prompt.resolved(with: text)
+            return try await AIServiceRouter.sendPrompt(
+                content, model: model.id, provider: model.provider, apiKey: apiKey,
                 webSearch: prompt.webSearchEnabled
             )
         }
@@ -68,6 +69,7 @@ final class PromptPopupViewModel {
                 for: model.provider, entries: appState.settings.apiKeyEntries
             )
             appState.aiResponse = try await request(model, apiKey)
+            appState.isResponsePlainText = model.provider.isTranslationService
             appState.showingResult = true
         } catch {
             appState.lastError = error.localizedDescription
