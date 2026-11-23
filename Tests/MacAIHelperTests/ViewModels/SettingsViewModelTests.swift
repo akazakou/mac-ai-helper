@@ -58,7 +58,11 @@ struct SettingsViewModelTests {
 
     @Test("Settings JSON round-trip")
     func settingsRoundTrip() throws {
-        let service = SettingsService()
+        // A temporary directory keeps the test away from the user's real settings file.
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let service = SettingsService(directory: directory)
         let original = AppSettings.defaultSettings
 
         try service.saveSettings(original)
