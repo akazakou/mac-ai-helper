@@ -12,10 +12,7 @@ struct SettingsService: Sendable {
 
     /// Defaults to ~/Library/Application Support/MacAIHelper.
     /// Tests must pass a temporary directory: saving to the default one overwrites the user's real settings.
-    init(
-        directory: URL = URL.applicationSupportDirectory
-            .appendingPathComponent("MacAIHelper", isDirectory: true)
-    ) {
+    init(directory: URL = AppConstants.dataDirectory) {
         self.directory = directory
     }
 

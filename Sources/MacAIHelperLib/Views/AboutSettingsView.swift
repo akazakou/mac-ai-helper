@@ -1,9 +1,11 @@
 // AboutSettingsView.swift
-// Settings tab showing app version, legal links, and AI content disclaimer.
+// Settings tab showing app version, updates, legal links, and AI content disclaimer.
 
 import SwiftUI
 
 struct AboutSettingsView: View {
+    @Environment(AppState.self) private var appState
+
     /// App version from the main bundle (e.g. "1.0.0")
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–"
@@ -20,6 +22,8 @@ struct AboutSettingsView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // App identity header
                     appHeader
+
+                    updateSection
 
                     Divider()
 
@@ -70,6 +74,48 @@ struct AboutSettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    // MARK: - Updates
+
+    private var updateSection: some View {
+        HStack(spacing: 12) {
+            Button("Check for Updates") {
+                Task { await appState.updates.checkForUpdates() }
+            }
+            .disabled(appState.updates.isBusy)
+
+            updateStatus
+        }
+        .font(.callout)
+    }
+
+    @ViewBuilder
+    private var updateStatus: some View {
+        switch appState.updates.status {
+        case .idle:
+            EmptyView()
+        case .checking:
+            Text("Checking…")
+                .foregroundStyle(.secondary)
+        case .upToDate:
+            Text("You have the latest version.")
+                .foregroundStyle(.secondary)
+        case .available(let release):
+            Button("Install \(release.version) and Relaunch") {
+                Task { await appState.updates.install(release) }
+            }
+        case .installing:
+            ProgressView()
+                .controlSize(.small)
+            Text("Installing…")
+                .foregroundStyle(.secondary)
+        case .failed(let message):
+            Text(message)
+                .foregroundStyle(.red)
+                .fixedSize(horizontal: false, vertical: true)
+            Link("Download manually", destination: AppConstants.releasesURL)
         }
     }
 

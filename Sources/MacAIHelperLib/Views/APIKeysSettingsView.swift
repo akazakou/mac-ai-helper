@@ -17,7 +17,7 @@ struct APIKeysSettingsView: View {
             Text("API Keys")
                 .font(.headline)
 
-            Text("Add API keys for the AI providers you want to use. Keys are stored securely in the macOS Keychain.")
+            Text("Add API keys for the AI providers you want to use. Keys are stored on this Mac in a file only your user account can read.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

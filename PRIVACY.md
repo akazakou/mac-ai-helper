@@ -13,7 +13,9 @@ We have no backend, no analytics, and no tracking of any kind.
 ## Data Stored Locally on Your Device
 
 - **API Keys** — Your provider API keys (OpenAI, Anthropic, Google Gemini, OpenRouter, Google Translate)
-  are stored securely in the macOS Keychain on your device. They are never sent to us.
+  are stored on your device in `~/Library/Application Support/MacAIHelper/api-keys.json`,
+  a file only your macOS user account can read. They are not encrypted, so software running
+  under your account can read them. They are never sent to us.
 - **Settings** — Your prompt templates, keyboard shortcuts, and preferences are saved
   locally in `~/Library/Application Support/MacAIHelper`.
 
@@ -31,6 +33,11 @@ or to the keyless Google Translate endpoint (`translate.googleapis.com`) when it
 
 On launch the App requests the list of supported languages from the keyless Google
 Translate endpoint. This request contains no personal data or content.
+
+To find updates, the App requests the latest release from the GitHub API (`api.github.com`)
+on launch and once a day, and downloads the new version from GitHub when you choose to install it.
+These requests contain no personal data or content. See the
+[GitHub Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
 
 Please review the privacy policies of the AI providers you use:
 

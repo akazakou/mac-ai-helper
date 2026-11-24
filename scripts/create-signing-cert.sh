@@ -2,9 +2,10 @@
 # ==============================================================================
 # Create a persistent self-signed code-signing certificate for GitHub releases.
 #
-# macOS binds Accessibility / Screen Recording grants and Keychain access to the
-# app's designated requirement (bundle ID + signing certificate). Signing every
-# release with the same certificate keeps those grants across updates.
+# macOS binds Accessibility / Screen Recording grants to the app's designated
+# requirement (bundle ID + signing certificate). Signing every release with the
+# same certificate keeps those grants across updates, and the in-app updater
+# installs only releases that meet the same requirement.
 # No Apple Developer account is involved; Gatekeeper still treats the app as
 # unidentified, so users confirm "Open Anyway" once per downloaded version.
 #

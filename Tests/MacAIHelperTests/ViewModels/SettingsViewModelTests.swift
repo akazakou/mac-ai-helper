@@ -108,7 +108,7 @@ struct SettingsViewModelTests {
             .networkError("timeout"),
             .apiError(statusCode: 401, message: "unauthorized"),
             .decodingError("bad json"),
-            .keychainError("access denied"),
+            .keyStoreError("access denied"),
             .accessibilityPermissionDenied,
             .screenCapturePermissionDenied,
         ]

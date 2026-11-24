@@ -9,7 +9,7 @@ import Foundation
 public struct AppSettings: Codable, Sendable {
     /// User-defined prompt templates
     public var prompts: [Prompt]
-    /// Metadata for API keys (actual keys stored in Keychain)
+    /// Metadata for API keys (actual keys stored in APIKeyStore)
     public var apiKeyEntries: [APIKeyEntry]
     /// Legacy global model identifier, kept only to migrate it into prompts (see migrateLegacyModelSelection)
     public var selectedModelId: String?

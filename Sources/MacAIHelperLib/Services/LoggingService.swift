@@ -15,8 +15,11 @@ enum Log {
     /// Settings persistence (load, save, migration)
     static let settings = Logger(subsystem: subsystem, category: "settings")
 
-    /// Keychain operations (read, write, delete API keys)
-    static let keychain = Logger(subsystem: subsystem, category: "keychain")
+    /// API key storage (read, write, delete API keys, migration from the Keychain)
+    static let keyStore = Logger(subsystem: subsystem, category: "keyStore")
+
+    /// In-app updates (version check, download, install)
+    static let update = Logger(subsystem: subsystem, category: "update")
 
     /// Keyboard shortcut registration and handling
     static let hotkey = Logger(subsystem: subsystem, category: "hotkey")

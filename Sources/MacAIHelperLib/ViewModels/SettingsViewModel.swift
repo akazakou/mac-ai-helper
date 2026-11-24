@@ -79,10 +79,10 @@ final class SettingsViewModel {
 
     // MARK: - API Key Management
 
-    /// Adds a new API key for a provider, storing it securely in the Keychain.
+    /// Adds a new API key for a provider, saving it to the key store.
     func addAPIKey(provider: AIProvider, key: String, label: String = "") throws {
         let entry = APIKeyEntry(provider: provider, label: label)
-        try KeychainService.saveKey(key, for: entry.id)
+        try APIKeyStore().saveKey(key, for: entry.id)
         appState.settings.apiKeyEntries.append(entry)
         appState.saveSettings()
 
@@ -90,11 +90,11 @@ final class SettingsViewModel {
         Task { await appState.loadModels() }
     }
 
-    /// Deletes an API key entry and removes it from the Keychain.
-    /// Always removes the settings entry even if keychain cleanup fails.
+    /// Deletes an API key entry and removes it from the key store.
+    /// Always removes the settings entry even if key store cleanup fails.
     func deleteAPIKey(_ entry: APIKeyEntry) {
-        // Best-effort keychain cleanup — don't block settings removal
-        try? KeychainService.deleteKey(for: entry.id)
+        // Best-effort key store cleanup — don't block settings removal
+        try? APIKeyStore().deleteKey(for: entry.id)
         appState.settings.apiKeyEntries.removeAll { $0.id == entry.id }
         appState.saveSettings()
 
@@ -106,7 +106,7 @@ final class SettingsViewModel {
 
     /// Fetches available models for a specific provider to validate API key.
     func fetchModelsForProvider(_ provider: AIProvider) async throws -> [AIModel] {
-        let apiKey = try KeychainService.apiKey(
+        let apiKey = try APIKeyStore().apiKey(
             for: provider, entries: appState.settings.apiKeyEntries
         )
         return try await AIServiceRouter.fetchModels(provider: provider, apiKey: apiKey)

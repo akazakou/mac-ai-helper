@@ -39,6 +39,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupHotkeyService()
 
+        // Must finish before anything reads API keys
+        LegacyKeychainMigration.moveKeys(to: APIKeyStore())
+
+        appState.updates.startAutomaticChecks()
+
         // Load AI models at startup so the popup opens instantly
         Task {
             await appState.loadModels()
@@ -250,6 +255,9 @@ public final class AppState {
     /// Providers whose models list failed to load during the last fetch
     public var failedProviders: Set<AIProvider> = []
 
+    /// In-app update state: availability of a newer release and install progress
+    let updates = UpdateViewModel()
+
     private let settingsService = SettingsService()
 
     public init() {
@@ -271,12 +279,12 @@ public final class AppState {
     public var isLoadingModels = false
 
     /// Fetches models from all configured providers.
-    /// Uses a single keychain read to avoid multiple password prompts.
+    /// Uses a single read of the key store for all providers.
     public func loadModels() async {
         isLoadingModels = true
 
-        // Read all API keys in a single keychain access (one password prompt)
-        let cachedKeys = KeychainService.readAllKeys()
+        // Read all API keys in a single key store access
+        let cachedKeys = APIKeyStore().readAllKeys()
 
         let configuredProviders = Set(settings.apiKeyEntries.map(\.provider))
             .union(AIProvider.allCases.filter { !$0.requiresAPIKey })
@@ -285,7 +293,7 @@ public final class AppState {
 
         for provider in configuredProviders {
             do {
-                let apiKey = try KeychainService.apiKey(
+                let apiKey = try APIKeyStore.apiKey(
                     for: provider, entries: settings.apiKeyEntries,
                     cachedKeys: cachedKeys
                 )

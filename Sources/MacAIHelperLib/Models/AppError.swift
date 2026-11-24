@@ -13,7 +13,8 @@ public enum AppError: LocalizedError, Sendable {
     case networkError(String)
     case apiError(statusCode: Int, message: String)
     case decodingError(String)
-    case keychainError(String)
+    case keyStoreError(String)
+    case updateFailed(String)
     case accessibilityPermissionDenied
     case screenCapturePermissionDenied
     case screenCaptureCancelled
@@ -38,8 +39,10 @@ public enum AppError: LocalizedError, Sendable {
             "API error (\(code)): \(msg)"
         case .decodingError(let msg):
             "Failed to decode response: \(msg)"
-        case .keychainError(let msg):
-            "Keychain error: \(msg)"
+        case .keyStoreError(let msg):
+            "API key storage error: \(msg)"
+        case .updateFailed(let msg):
+            "Update failed: \(msg)"
         case .accessibilityPermissionDenied:
             "Accessibility permission is required for global shortcuts"
         case .screenCapturePermissionDenied:
