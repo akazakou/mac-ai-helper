@@ -177,10 +177,8 @@ cd ~/actions-runner && ./svc.sh uninstall
 ./config.sh remove --token "$(gh api -X POST repos/akazakou/mac-ai-helper/actions/runners/remove-token --jq .token)"
 ```
 
-The same runner builds the code for CodeQL code scanning ([`.github/workflows/codeql.yml`](.github/workflows/codeql.yml)).
-
-Security: jobs run with the runner user's privileges. The release workflow only starts on tag pushes and
-manual runs by collaborators, code scanning also on pushes to `master` and weekly, and fork PRs from all outside contributors need approval — never add
+Security: jobs run with the runner user's privileges. The workflow only starts on tag pushes and
+manual runs by collaborators, and fork PRs from all outside contributors need approval — never add
 `pull_request` triggers that target this runner.
 
 
