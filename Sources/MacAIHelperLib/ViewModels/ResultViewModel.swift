@@ -6,8 +6,8 @@ import Foundation
 @Observable
 @MainActor
 final class ResultViewModel {
-    /// Reference to the shared app state
-    private let appState: AppState
+    /// State of the popup window showing the result
+    private let session: PopupSession
 
     /// Whether the response was recently copied (for UI feedback)
     var copied = false
@@ -21,13 +21,13 @@ final class ResultViewModel {
     /// How long the "Copied!" and "Saved!" confirmations stay visible
     private static let confirmationDuration: Duration = .seconds(2)
 
-    init(appState: AppState) {
-        self.appState = appState
+    init(session: PopupSession) {
+        self.session = session
     }
 
     /// The response to display
     var response: PromptResponse? {
-        appState.response
+        session.response
     }
 
     /// Whether there is something to copy
@@ -37,12 +37,12 @@ final class ResultViewModel {
 
     /// Whether the app is waiting for an AI response
     var isLoading: Bool {
-        appState.isLoading
+        session.isLoading
     }
 
     /// The most recent error message
     var errorMessage: String? {
-        appState.lastError
+        session.lastError
     }
 
     /// Copies the response (text or translated image) to the system clipboard.
@@ -83,8 +83,8 @@ final class ResultViewModel {
 
     /// Dismisses the result view and resets state.
     func dismiss() {
-        appState.showingResult = false
-        appState.response = nil
-        appState.lastError = nil
+        session.showingResult = false
+        session.response = nil
+        session.lastError = nil
     }
 }

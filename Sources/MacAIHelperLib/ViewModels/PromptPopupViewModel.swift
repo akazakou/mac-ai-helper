@@ -9,8 +9,15 @@ final class PromptPopupViewModel {
     /// Reference to the shared app state
     private let appState: AppState
 
-    init(appState: AppState) {
+    /// State of the popup window this view model serves
+    private let session: PopupSession
+
+    /// The running prompt request, kept so that closing the popup can stop it
+    private var requestTask: Task<Void, Never>?
+
+    init(appState: AppState, session: PopupSession) {
         self.appState = appState
+        self.session = session
     }
 
     /// Availability of the given prompt's model, used for badge rendering
@@ -28,9 +35,27 @@ final class PromptPopupViewModel {
 
     // MARK: - Prompt Execution
 
+    /// Starts the prompt on the content captured for this popup.
+    func start(_ prompt: Prompt) {
+        requestTask = Task {
+            if let imageData = session.capturedImage {
+                await selectPromptWithImage(prompt, imageData: imageData)
+            } else {
+                await selectPrompt(prompt)
+            }
+        }
+    }
+
+    /// Stops the running request, if any. The API call is cancelled together with its task.
+    func cancelRequest() {
+        requestTask?.cancel()
+    }
+
+    // MARK: - Private
+
     /// Executes a prompt with the captured text content.
-    func selectPrompt(_ prompt: Prompt) async {
-        guard let text = appState.capturedText else { return }
+    private func selectPrompt(_ prompt: Prompt) async {
+        guard let text = session.capturedText else { return }
         await run(prompt) { model, apiKey in
             // Translation services translate the captured text itself, not an instruction about it.
             let isTranslation = model.provider.isTranslationService
@@ -44,7 +69,7 @@ final class PromptPopupViewModel {
     }
 
     /// Executes a prompt with captured image data.
-    func selectPromptWithImage(_ prompt: Prompt, imageData: Data) async {
+    private func selectPromptWithImage(_ prompt: Prompt, imageData: Data) async {
         let resolvedPrompt = prompt.resolved(with: "Analyze this image.")
         await run(prompt) { model, apiKey in
             if model.provider.isTranslationService {
@@ -61,26 +86,24 @@ final class PromptPopupViewModel {
         }
     }
 
-    // MARK: - Private
-
     /// Validates the prompt's model, then performs the request and publishes the result or error.
     private func run(
         _ prompt: Prompt,
         request: (AIModel, String) async throws -> PromptResponse
     ) async {
-        appState.lastError = nil
-        appState.isLoading = true
-        defer { appState.isLoading = false }
+        session.lastError = nil
+        session.isLoading = true
+        defer { session.isLoading = false }
 
         do {
             let model = try usableModel(for: prompt)
             let apiKey = try APIKeyStore().apiKey(
                 for: model.provider, entries: appState.settings.apiKeyEntries
             )
-            appState.response = try await request(model, apiKey)
-            appState.showingResult = true
+            session.response = try await request(model, apiKey)
+            session.showingResult = true
         } catch {
-            appState.lastError = error.localizedDescription
+            session.lastError = error.localizedDescription
         }
     }
 
