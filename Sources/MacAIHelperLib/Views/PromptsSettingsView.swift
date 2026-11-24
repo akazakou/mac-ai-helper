@@ -150,7 +150,7 @@ private struct PromptEditorSheet: View {
             _template = State(initialValue: "")
             _icon = State(initialValue: "text.bubble")
             _webSearchEnabled = State(initialValue: false)
-            _model = State(initialValue: viewModel.availableModels.first)
+            _model = State(initialValue: viewModel.defaultModel)
         case .editing(let prompt):
             _title = State(initialValue: prompt.title)
             _template = State(initialValue: prompt.template)
@@ -169,9 +169,19 @@ private struct PromptEditorSheet: View {
         viewModel.availability(of: model)
     }
 
+    /// Translation prompts send the captured text as-is, so they have no template or web search.
+    private var isTranslation: Bool {
+        model?.provider.isTranslationService ?? false
+    }
+
+    /// The toggle is hidden for translation prompts, so a value left over from an AI model is dropped.
+    private var isWebSearchApplied: Bool {
+        webSearchEnabled && !isTranslation
+    }
+
     /// Outdated, missing, or not-yet-verified models block saving; provider load failures only warn.
     private var canSave: Bool {
-        guard !title.isEmpty, !template.isEmpty else { return false }
+        guard !title.isEmpty, isTranslation || !template.isEmpty else { return false }
         switch modelAvailability {
         case .available, .providerLoadFailed:
             return true
@@ -191,28 +201,33 @@ private struct PromptEditorSheet: View {
 
                 modelSection
 
-                VStack(alignment: .leading) {
-                    Text("Template")
-                        .font(.caption)
-                    TextEditor(text: $template)
-                        .font(.body.monospaced())
-                        .frame(minHeight: 100)
-                        .border(Color.secondary.opacity(0.3))
+                if !isTranslation {
+                    VStack(alignment: .leading) {
+                        Text("Template")
+                            .font(.caption)
+                        TextEditor(text: $template)
+                            .font(.body.monospaced())
+                            .frame(minHeight: 100)
+                            .border(Color.secondary.opacity(0.3))
+                    }
                 }
 
                 IconPickerView(selectedIcon: $icon)
 
-                Toggle(isOn: $webSearchEnabled) {
-                    Label("Enable web search", systemImage: "magnifyingglass")
+                if !isTranslation {
+                    Toggle(isOn: $webSearchEnabled) {
+                        Label("Enable web search", systemImage: "magnifyingglass")
+                    }
+                    .help("Let the model search the web for up-to-date information when answering this prompt")
                 }
-                .help("Let the model search the web for up-to-date information when answering this prompt")
             }
 
-            // Hint about optional {text} placeholder
-            Text("Tip: Use {text} in your prompt to control where captured content is inserted. If omitted, captured content will be appended after your prompt automatically.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            editorHint
+
+            if isTranslation {
+                // Without the template editor nothing else fills the sheet's fixed height.
+                Spacer(minLength: 0)
+            }
 
             HStack {
                 Button("Cancel") {
@@ -232,6 +247,20 @@ private struct PromptEditorSheet: View {
         }
         .padding()
         .frame(width: 400, height: 470)
+    }
+
+    // MARK: - Hint
+
+    private var editorHint: some View {
+        Text(
+            isTranslation
+                ? "The captured text is translated into the selected language as is. The source language is detected automatically. Screenshots are translated in place and can be saved as an image."
+                // Hint about optional {text} placeholder
+                : "Tip: Use {text} in your prompt to control where captured content is inserted. If omitted, captured content will be appended after your prompt automatically."
+        )
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Model Section
@@ -257,7 +286,7 @@ private struct PromptEditorSheet: View {
             }
 
             PromptBadgesView(
-                model: model, availability: modelAvailability, webSearchEnabled: webSearchEnabled
+                model: model, availability: modelAvailability, webSearchEnabled: isWebSearchApplied
             )
 
             modelStatusMessage
@@ -288,14 +317,14 @@ private struct PromptEditorSheet: View {
             viewModel.addPrompt(
                 Prompt(
                     title: title, template: template, icon: icon,
-                    webSearchEnabled: webSearchEnabled, model: model
+                    webSearchEnabled: isWebSearchApplied, model: model
                 )
             )
         case .editing(var existing):
             existing.title = title
             existing.template = template
             existing.icon = icon
-            existing.webSearchEnabled = webSearchEnabled
+            existing.webSearchEnabled = isWebSearchApplied
             existing.model = model
             viewModel.updatePrompt(existing)
         }
@@ -310,6 +339,11 @@ private struct PromptRowView: View {
     let modelAvailability: ModelAvailability
     let onEdit: () -> Void
     let onDelete: () -> Void
+
+    /// Translation prompts do not use their template, so it is not shown.
+    private var isTranslation: Bool {
+        prompt.model?.provider.isTranslationService ?? false
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -329,10 +363,12 @@ private struct PromptRowView: View {
                     availability: modelAvailability,
                     webSearchEnabled: prompt.webSearchEnabled
                 )
-                Text(prompt.template)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if !isTranslation {
+                    Text(prompt.template)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()

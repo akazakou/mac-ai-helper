@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: October 29, 2026_
+_Last updated: November 24, 2026_
 
 Mac AI Helper ("the App") is open-source software developed and maintained by Castloud.
 This policy explains what data the App handles and how it is treated.
@@ -12,7 +12,7 @@ We have no backend, no analytics, and no tracking of any kind.
 
 ## Data Stored Locally on Your Device
 
-- **API Keys** — Your AI provider API keys (OpenAI, Anthropic, Google Gemini, OpenRouter)
+- **API Keys** — Your provider API keys (OpenAI, Anthropic, Google Gemini, OpenRouter, Google Translate)
   are stored securely in the macOS Keychain on your device. They are never sent to us.
 - **Settings** — Your prompt templates, keyboard shortcuts, and preferences are saved
   locally in `~/Library/Application Support/MacAIHelper`.
@@ -24,18 +24,30 @@ directly from your device to the AI provider you have configured (OpenAI, Anthro
 Google, or OpenRouter). This communication happens between your Mac and the provider's
 API — it does not pass through any Castloud servers.
 
+When you run a Google Translate prompt, the selected text is sent directly from your
+device to Google: to the Google Cloud Translation API when the prompt uses your API key,
+or to the keyless Google Translate endpoint (`translate.googleapis.com`) when it uses
+"Google Translate Free".
+
+On launch the App requests the list of supported languages from the keyless Google
+Translate endpoint. This request contains no personal data or content.
+
 Please review the privacy policies of the AI providers you use:
 
 - [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy)
 - [Anthropic Privacy Policy](https://www.anthropic.com/privacy)
 - [Google Privacy Policy](https://policies.google.com/privacy)
+- [Google Cloud Privacy Notice](https://cloud.google.com/terms/cloud-privacy-notice) (Google Translate)
 - [OpenRouter Privacy Policy](https://openrouter.ai/privacy)
 
 ## Screen Recording
 
 The screenshot feature uses macOS ScreenCaptureKit to capture a region of your screen.
 The captured image is processed locally and sent only to the AI provider you have
-configured. Screenshots are not stored permanently and are discarded after the analysis
+configured. With a Google Translate prompt the image itself is not sent anywhere: its text
+is recognized on your device, only that text is sent to Google, and the translated image
+is written to disk only where you choose to save it.
+Screenshots are not stored permanently and are discarded after the analysis
 is complete.
 
 ## Third-Party API Charges

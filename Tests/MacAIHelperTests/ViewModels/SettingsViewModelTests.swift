@@ -58,7 +58,11 @@ struct SettingsViewModelTests {
 
     @Test("Settings JSON round-trip")
     func settingsRoundTrip() throws {
-        let service = SettingsService()
+        // A temporary directory keeps the test away from the user's real settings file.
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let service = SettingsService(directory: directory)
         let original = AppSettings.defaultSettings
 
         try service.saveSettings(original)
@@ -76,13 +80,15 @@ struct SettingsViewModelTests {
         #expect(AIProvider.openRouter.baseURL.host == "openrouter.ai")
     }
 
-    @Test("AIProvider allCases contains all four providers")
+    @Test("AIProvider allCases contains all six providers")
     func providerAllCases() {
-        #expect(AIProvider.allCases.count == 4)
+        #expect(AIProvider.allCases.count == 6)
         #expect(AIProvider.allCases.contains(.openAI))
         #expect(AIProvider.allCases.contains(.anthropic))
         #expect(AIProvider.allCases.contains(.gemini))
         #expect(AIProvider.allCases.contains(.openRouter))
+        #expect(AIProvider.allCases.contains(.googleTranslate))
+        #expect(AIProvider.allCases.contains(.googleTranslateFree))
     }
 
     @Test("APIKeyEntry defaults label to provider name")

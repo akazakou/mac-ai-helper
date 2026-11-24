@@ -27,6 +27,8 @@ Free and open source under [GPL-3.0](LICENSE).
   - `⇧⌘C` (`Cmd+Shift+C`) — Capture selected text and show prompt popup
   - `⌃⌘C` (`Ctrl+Cmd+C`) — Capture a screenshot region and show prompt popup
 - **Multiple AI Providers** — Supports OpenAI, Anthropic (Claude), Google Gemini, and OpenRouter
+- **Google Translate** — Near-instant translation; pick a target language as the prompt's model. Works without a key (free endpoint) or with your own Google Cloud Translation API key
+- **Screenshot Translation** — A Google Translate prompt on a screenshot returns the image with its text translated in place; copy it or save it as a PNG
 - **Dynamic Model Listing** — Fetches available models from each provider's API
 - **Per-Prompt Models** — Each prompt uses its own model, picked in the prompt editor; outdated or unreachable models are flagged with badges
 - **Custom Prompts** — Configure unlimited AI prompt templates
@@ -51,6 +53,31 @@ Free and open source under [GPL-3.0](LICENSE).
 2. **Add API keys** — Open Settings (click menu bar icon → Settings) → API Keys tab → Add keys for your preferred providers
 3. **Configure prompts** — Settings → Prompts tab to add, edit, or reorder prompts
 4. **Start using** — Select text in any app, press `⇧⌘C`, pick a prompt, and get AI responses!
+
+### Google Translate (optional)
+
+Google Translate answers much faster than an AI model. There are two ways to use it:
+
+**Free, no key** — Settings → Prompts → Add Prompt → pick `[Google Translate Free] <language>` as the model.
+This uses the keyless endpoint of the Google Translate web client. It is undocumented, so Google may
+rate-limit or change it at any time.
+
+**Official API, your own key** — stable and documented:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/library/translate.googleapis.com), enable **Cloud Translation API** on a project with billing (the first 500,000 characters per month are free)
+2. Create an API key under [Credentials](https://console.cloud.google.com/apis/credentials) and restrict it to Cloud Translation API
+3. Settings → API Keys → Add API Key → provider **Google Translate**
+4. Settings → Prompts → Add Prompt → pick `[Google Translate] <language>` as the model
+
+The selected text is translated as is (no template), and the source language is detected automatically.
+
+**Screenshots** — press `⌃⌘C`, select a region and pick a Google Translate prompt. The text is recognized on your Mac
+(Apple Vision), only the recognized text is sent to Google, and the translation is drawn over the original text.
+Use **Save Image…** to store the result as a PNG, or **Copy** to put it on the clipboard.
+Google offers no API for its own image translation, so the result is simpler than on translate.google.com:
+text is covered with a flat background color, which shows on photos and gradients.
+The very first screenshot translation on a Mac can take up to half a minute while macOS prepares its text recognition models.
+A Gemini (AI Studio) key works only if Cloud Translation API is enabled for that key's project.
 
 ## Requirements (development)
 
@@ -166,7 +193,7 @@ Sources/MacAIHelperLib/
 ### Key Components
 
 - **HotkeyService** — Global shortcuts via KeyboardShortcuts (Carbon RegisterEventHotKey)
-- **AIServiceRouter** — Routes requests to OpenAI, Anthropic, Gemini, or OpenRouter
+- **AIServiceRouter** — Routes requests to OpenAI, Anthropic, Gemini, OpenRouter, or Google Translate (official API or free endpoint)
 - **KeychainService** — Secure API key storage in macOS Keychain
 - **SettingsService** — JSON-based settings persistence in Application Support
 - **FloatingPanelController** — NSPanel-based floating popup window

@@ -158,7 +158,10 @@ final class FloatingPanelController {
     /// Dismisses the panel when ESC is pressed.
     private func monitorEscKey() {
         escKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.keyCode == Self.escKeyCode else { return event }
+            // With a sheet open (e.g. the save panel), ESC belongs to the sheet.
+            guard event.keyCode == Self.escKeyCode, self?.panel?.attachedSheet == nil else {
+                return event
+            }
             self?.dismissPopup()
             return nil // Consume the event
         }
@@ -172,8 +175,10 @@ final class FloatingPanelController {
             queue: .main
         ) { [weak self] _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.focusLossDismissDelay) {
-                // Only dismiss if panel is still not key (user didn't click back)
-                guard let self, self.panel?.isKeyWindow == false, !self.appState.isPopupPinned
+                // Only dismiss if panel is still not key (user didn't click back).
+                // A sheet (e.g. the save panel) takes key status without the user leaving the popup.
+                guard let self, self.panel?.isKeyWindow == false, self.panel?.attachedSheet == nil,
+                    !self.appState.isPopupPinned
                 else { return }
                 self.dismissPopup()
             }

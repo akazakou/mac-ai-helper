@@ -21,6 +21,14 @@ struct PasteboardService: Sendable {
         pasteboard.setString(text, forType: .string)
     }
 
+    /// Writes PNG image data to the system clipboard.
+    @MainActor
+    static func writeImage(_ pngData: Data) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setData(pngData, forType: .png)
+    }
+
     /// Reads image data (PNG) from the system clipboard.
     @MainActor
     static func readImage() -> Data? {

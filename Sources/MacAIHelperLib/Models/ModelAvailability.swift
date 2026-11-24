@@ -28,7 +28,9 @@ public enum ModelAvailability: Sendable {
         case .providerLoadFailed:
             model.map {
                 "Can't load the \($0.provider.rawValue) models list. "
-                    + "Check your API key or replace it in the API Keys tab."
+                    + ($0.provider.requiresAPIKey
+                        ? "Check your API key or replace it in the API Keys tab."
+                        : "Check your internet connection.")
             }
         case .notSelected, .loading, .available:
             nil

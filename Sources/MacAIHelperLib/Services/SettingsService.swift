@@ -7,18 +7,27 @@ struct SettingsService: Sendable {
     /// File name for the settings JSON file
     private static let fileName = "settings.json"
 
+    /// Directory that holds the settings file
+    private let directory: URL
+
+    /// Defaults to ~/Library/Application Support/MacAIHelper.
+    /// Tests must pass a temporary directory: saving to the default one overwrites the user's real settings.
+    init(
+        directory: URL = URL.applicationSupportDirectory
+            .appendingPathComponent("MacAIHelper", isDirectory: true)
+    ) {
+        self.directory = directory
+    }
+
     /// Returns the URL for the settings file in ~/Library/Application Support/MacAIHelper.
     func settingsFileURL() -> URL {
-        let appDirectory = URL.applicationSupportDirectory
-            .appendingPathComponent("MacAIHelper", isDirectory: true)
-
         // Ensure the directory exists
         try? FileManager.default.createDirectory(
-            at: appDirectory,
+            at: directory,
             withIntermediateDirectories: true
         )
 
-        return appDirectory.appendingPathComponent(Self.fileName)
+        return directory.appendingPathComponent(Self.fileName)
     }
 
     /// Loads settings from disk. Returns default settings if file doesn't exist or is corrupt.

@@ -1,9 +1,11 @@
 // ResultView.swift
-// Displays the AI response with copy-to-clipboard functionality.
+// Displays the AI response (Markdown, plain text or a translated image)
+// with copy-to-clipboard and save-image actions.
 
 import AppKit
 import MarkdownUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ResultView: View {
     @Bindable var viewModel: ResultViewModel
@@ -34,16 +36,63 @@ struct ResultView: View {
 
     private var responseView: some View {
         ScrollView {
-            Markdown(viewModel.responseText)
+            responseContent
                 .textSelection(.enabled)
-                .markdownTextStyle(\.text) {
-                    FontSize(NSFont.systemFontSize)
-                }
-                .markdownTheme(.gitHub)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
         }
         .frame(minHeight: 100, maxHeight: .infinity)
+    }
+
+    /// Translations are shown verbatim: Markdown would join their lines and
+    /// treat characters such as * or # as formatting.
+    @ViewBuilder
+    private var responseContent: some View {
+        switch viewModel.response {
+        case .plainText(let text):
+            Text(text)
+                .font(.system(size: NSFont.systemFontSize))
+        case .markdown(let text):
+            Markdown(text)
+                .markdownTextStyle(\.text) {
+                    FontSize(NSFont.systemFontSize)
+                }
+                .markdownTheme(.gitHub)
+        case .image(let pngData):
+            translatedImage(pngData)
+        case nil:
+            EmptyView()
+        }
+    }
+
+    /// Shows the image no larger than the screenshot was on screen, shrinking it to the window width.
+    @ViewBuilder
+    private func translatedImage(_ pngData: Data) -> some View {
+        if let image = NSImage(data: pngData) {
+            // The PNG holds screen pixels; dividing by the display scale gives its size in points.
+            let displayScale = NSScreen.main?.backingScaleFactor ?? 1
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: image.size.width / displayScale)
+        }
+    }
+
+    // MARK: - Save Image
+
+    private static let defaultImageFileName = "Translated screenshot.png"
+
+    /// Asks where to save the translated image. The panel is a sheet of the popup,
+    /// which keeps the popup from closing as it would when another window takes focus.
+    private func presentSaveImagePanel() {
+        guard let window = NSApp.keyWindow else { return }
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.png]
+        savePanel.nameFieldStringValue = Self.defaultImageFileName
+        savePanel.beginSheetModal(for: window) { result in
+            guard result == .OK, let url = savePanel.url else { return }
+            viewModel.saveImage(to: url)
+        }
     }
 
     // MARK: - Loading View
@@ -106,7 +155,25 @@ struct ResultView: View {
                     systemImage: viewModel.copied ? "checkmark" : "doc.on.doc"
                 )
             }
-            .disabled(viewModel.responseText.isEmpty)
+            .disabled(!viewModel.canCopy)
+
+            if case .image = viewModel.response {
+                Button {
+                    presentSaveImagePanel()
+                } label: {
+                    Label(
+                        viewModel.saved ? "Saved!" : "Save Image…",
+                        systemImage: viewModel.saved ? "checkmark" : "square.and.arrow.down"
+                    )
+                }
+            }
+
+            if let saveError = viewModel.saveErrorMessage {
+                Text(saveError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+            }
 
             Spacer()
 

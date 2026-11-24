@@ -44,8 +44,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             await appState.loadModels()
         }
 
-        // If no API keys are configured, open settings on the API Keys tab
-        if !appState.hasAPIKeys {
+        // If no API keys are configured (and no prompt can run without one), open settings on the API Keys tab
+        if !appState.canRunTextPrompts {
             Log.general.info("No API keys configured — opening settings on API Keys tab")
             // Small delay to let the menu bar finish initializing
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -122,7 +122,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Shortcut Handlers
 
     private func handleTextShortcut() {
-        guard appState.hasAPIKeys else {
+        guard appState.canRunTextPrompts else {
             showNoAPIKeysAlert()
             return
         }
@@ -214,7 +214,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 public final class AppState {
     public var capturedText: String?
     public var capturedImage: Data?
-    public var aiResponse: String?
+    /// Result of the last prompt: an AI answer, a translation, or a translated screenshot
+    public var response: PromptResponse?
     public var isLoading = false
     public var lastError: String?
     public var showingResult = false
@@ -231,8 +232,20 @@ public final class AppState {
     /// Whether at least one API key is configured
     public var hasAPIKeys: Bool { !settings.apiKeyEntries.isEmpty }
 
+    /// Whether the text popup has something to offer: an API key, or a prompt that
+    /// runs on a keyless provider (free Google Translate).
+    public var canRunTextPrompts: Bool {
+        hasAPIKeys || settings.prompts.contains { $0.model?.provider.requiresAPIKey == false }
+    }
+
     /// Available AI models fetched from providers
     public var availableModels: [AIModel] = []
+
+    /// Model preselected for prompts that have none. Translation languages are never
+    /// a sensible default, so they are skipped.
+    public var defaultModel: AIModel? {
+        availableModels.first { !$0.provider.isTranslationService }
+    }
 
     /// Providers whose models list failed to load during the last fetch
     public var failedProviders: Set<AIProvider> = []
@@ -266,6 +279,7 @@ public final class AppState {
         let cachedKeys = KeychainService.readAllKeys()
 
         let configuredProviders = Set(settings.apiKeyEntries.map(\.provider))
+            .union(AIProvider.allCases.filter { !$0.requiresAPIKey })
         var allModels: [AIModel] = []
         var failed: Set<AIProvider> = []
 
@@ -285,7 +299,11 @@ public final class AppState {
             }
         }
 
-        availableModels = allModels.sorted { $0.name < $1.name }
+        // AI models first; the long list of translation languages follows them.
+        availableModels = allModels.sorted {
+            ($0.provider.isTranslationService ? 1 : 0, $0.name)
+                < ($1.provider.isTranslationService ? 1 : 0, $1.name)
+        }
         failedProviders = failed
         isLoadingModels = false
 
@@ -296,8 +314,9 @@ public final class AppState {
     public func availability(of model: AIModel?) -> ModelAvailability {
         guard let model else { return .notSelected }
         if isLoadingModels { return .loading }
-        if !settings.apiKeyEntries.contains(where: { $0.provider == model.provider })
-            || failedProviders.contains(model.provider)
+        let isKeyMissing = model.provider.requiresAPIKey
+            && !settings.apiKeyEntries.contains(where: { $0.provider == model.provider })
+        if isKeyMissing || failedProviders.contains(model.provider)
         {
             return .providerLoadFailed
         }
@@ -310,10 +329,9 @@ public final class AppState {
         availableModels.first { $0.id == model.id && $0.provider == model.provider }
     }
 
-    /// Assigns the first available model to prompts without one and refreshes
+    /// Assigns the default model to prompts without one and refreshes
     /// display names of known models. Outdated models are never replaced silently.
     private func syncPromptModels() {
-        let defaultModel = availableModels.first
         var updatedPrompts = settings.prompts
 
         for index in updatedPrompts.indices {

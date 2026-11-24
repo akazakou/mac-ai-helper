@@ -22,3 +22,21 @@ protocol AIServiceProtocol: Sendable {
         _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
     ) async throws -> String
 }
+
+/// A provider that translates text. Its "models" are target languages (AIModel.id is the language code).
+protocol TranslationServiceProtocol: AIServiceProtocol {
+    /// Translates every text into the target language. The result keeps the order and count of `texts`.
+    func translate(
+        _ texts: [String], into languageCode: String, apiKey: String
+    ) async throws -> [String]
+}
+
+extension TranslationServiceProtocol {
+    /// Translation services return text only; screenshots are handled by ImageTranslationService,
+    /// which recognizes the text first.
+    func sendPromptWithImage(
+        _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
+    ) async throws -> String {
+        throw AppError.imageNotSupported(provider)
+    }
+}

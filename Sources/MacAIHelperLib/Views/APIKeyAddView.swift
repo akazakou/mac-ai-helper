@@ -32,7 +32,7 @@ struct APIKeyAddView: View {
             Form {
                 // Provider picker
                 Picker("Provider", selection: $selectedProvider) {
-                    ForEach(AIProvider.allCases) { provider in
+                    ForEach(AIProvider.allCases.filter(\.requiresAPIKey)) { provider in
                         Text(provider.rawValue).tag(provider)
                     }
                 }
