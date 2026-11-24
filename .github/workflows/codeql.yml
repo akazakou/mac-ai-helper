@@ -1,13 +1,9 @@
 # ==============================================================================
 # CodeQL code scanning for Mac AI Helper.
 #
-# Swift is built and analyzed on the maintainer's self-hosted Apple Silicon
-# runner (label `mac-ai-helper-release`), the workflow files on a GitHub-hosted
-# runner.
-#
-# Starts only on pushes to `master`, weekly and on manual runs by
-# collaborators — never add `pull_request` triggers to this workflow: the Swift
-# job builds the checked-out code on the self-hosted runner.
+# Runs on GitHub-hosted runners. The Swift job cannot use the self-hosted
+# Apple Silicon runner: CodeQL build tracing needs Rosetta 2, which is not
+# installed there.
 # ==============================================================================
 
 name: CodeQL
@@ -38,7 +34,7 @@ jobs:
         include:
           - language: swift
             build-mode: manual
-            runner: [self-hosted, macOS, ARM64, mac-ai-helper-release]
+            runner: macos-latest
           - language: actions
             build-mode: none
             runner: ubuntu-latest
@@ -52,8 +48,7 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
-      # CodeQL analyzes only what is compiled here. Checkout removes `.build`,
-      # so every run is a full build. One architecture is enough for analysis.
+      # CodeQL analyzes only what is compiled here. One architecture is enough for analysis.
       - name: Build Swift package
         if: matrix.build-mode == 'manual'
         run: swift build --arch arm64
