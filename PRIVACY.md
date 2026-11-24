@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: November 23, 2026_
+_Last updated: November 24, 2026_
 
 Mac AI Helper ("the App") is open-source software developed and maintained by Castloud.
 This policy explains what data the App handles and how it is treated.
@@ -44,7 +44,10 @@ Please review the privacy policies of the AI providers you use:
 
 The screenshot feature uses macOS ScreenCaptureKit to capture a region of your screen.
 The captured image is processed locally and sent only to the AI provider you have
-configured. Screenshots are not stored permanently and are discarded after the analysis
+configured. With a Google Translate prompt the image itself is not sent anywhere: its text
+is recognized on your device, only that text is sent to Google, and the translated image
+is written to disk only where you choose to save it.
+Screenshots are not stored permanently and are discarded after the analysis
 is complete.
 
 ## Third-Party API Charges

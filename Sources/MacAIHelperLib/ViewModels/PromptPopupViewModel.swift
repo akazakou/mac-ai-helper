@@ -33,11 +33,13 @@ final class PromptPopupViewModel {
         guard let text = appState.capturedText else { return }
         await run(prompt) { model, apiKey in
             // Translation services translate the captured text itself, not an instruction about it.
-            let content = model.provider.isTranslationService ? text : prompt.resolved(with: text)
-            return try await AIServiceRouter.sendPrompt(
-                content, model: model.id, provider: model.provider, apiKey: apiKey,
+            let isTranslation = model.provider.isTranslationService
+            let answer = try await AIServiceRouter.sendPrompt(
+                isTranslation ? text : prompt.resolved(with: text),
+                model: model.id, provider: model.provider, apiKey: apiKey,
                 webSearch: prompt.webSearchEnabled
             )
+            return isTranslation ? .plainText(answer) : .markdown(answer)
         }
     }
 
@@ -45,9 +47,16 @@ final class PromptPopupViewModel {
     func selectPromptWithImage(_ prompt: Prompt, imageData: Data) async {
         let resolvedPrompt = prompt.resolved(with: "Analyze this image.")
         await run(prompt) { model, apiKey in
-            try await AIServiceRouter.sendPromptWithImage(
-                resolvedPrompt, imageData: imageData, model: model.id, provider: model.provider,
-                apiKey: apiKey, webSearch: prompt.webSearchEnabled
+            if model.provider.isTranslationService {
+                return .image(
+                    try await ImageTranslationService.translate(imageData, into: model, apiKey: apiKey)
+                )
+            }
+            return .markdown(
+                try await AIServiceRouter.sendPromptWithImage(
+                    resolvedPrompt, imageData: imageData, model: model.id, provider: model.provider,
+                    apiKey: apiKey, webSearch: prompt.webSearchEnabled
+                )
             )
         }
     }
@@ -57,7 +66,7 @@ final class PromptPopupViewModel {
     /// Validates the prompt's model, then performs the request and publishes the result or error.
     private func run(
         _ prompt: Prompt,
-        request: (AIModel, String) async throws -> String
+        request: (AIModel, String) async throws -> PromptResponse
     ) async {
         appState.lastError = nil
         appState.isLoading = true
@@ -68,8 +77,7 @@ final class PromptPopupViewModel {
             let apiKey = try KeychainService.apiKey(
                 for: model.provider, entries: appState.settings.apiKeyEntries
             )
-            appState.aiResponse = try await request(model, apiKey)
-            appState.isResponsePlainText = model.provider.isTranslationService
+            appState.response = try await request(model, apiKey)
             appState.showingResult = true
         } catch {
             appState.lastError = error.localizedDescription

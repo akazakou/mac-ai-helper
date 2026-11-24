@@ -8,6 +8,8 @@ public enum AppError: LocalizedError, Sendable {
     case noModelSelected
     case modelUnavailable(String)
     case imageNotSupported(AIProvider)
+    case noTextInImage
+    case imageProcessingFailed(String)
     case networkError(String)
     case apiError(statusCode: Int, message: String)
     case decodingError(String)
@@ -26,6 +28,10 @@ public enum AppError: LocalizedError, Sendable {
             "Model \"\(modelName)\" is no longer available. Choose another model for this prompt in Settings → Prompts."
         case .imageNotSupported(let provider):
             "\(provider.rawValue) works with text only. Pick an AI model prompt for screenshots."
+        case .noTextInImage:
+            "No text was found in the screenshot."
+        case .imageProcessingFailed(let msg):
+            "Failed to process the image: \(msg)"
         case .networkError(let msg):
             "Network error: \(msg)"
         case .apiError(let code, let msg):

@@ -254,7 +254,7 @@ private struct PromptEditorSheet: View {
     private var editorHint: some View {
         Text(
             isTranslation
-                ? "The captured text is translated into the selected language as is. The source language is detected automatically. Screenshots are not supported."
+                ? "The captured text is translated into the selected language as is. The source language is detected automatically. Screenshots are translated in place and can be saved as an image."
                 // Hint about optional {text} placeholder
                 : "Tip: Use {text} in your prompt to control where captured content is inserted. If omitted, captured content will be appended after your prompt automatically."
         )

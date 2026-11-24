@@ -214,9 +214,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 public final class AppState {
     public var capturedText: String?
     public var capturedImage: Data?
-    public var aiResponse: String?
-    /// Whether aiResponse is plain text (a translation) and must not be rendered as Markdown
-    public var isResponsePlainText = false
+    /// Result of the last prompt: an AI answer, a translation, or a translated screenshot
+    public var response: PromptResponse?
     public var isLoading = false
     public var lastError: String?
     public var showingResult = false

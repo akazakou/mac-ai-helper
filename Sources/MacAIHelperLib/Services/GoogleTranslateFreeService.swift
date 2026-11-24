@@ -6,7 +6,7 @@
 
 import Foundation
 
-struct GoogleTranslateFreeService: AIServiceProtocol {
+struct GoogleTranslateFreeService: TranslationServiceProtocol {
     let provider: AIProvider = .googleTranslateFree
 
     /// Client id the endpoint accepts without an API key
@@ -77,13 +77,30 @@ struct GoogleTranslateFreeService: AIServiceProtocol {
         return translation
     }
 
-    // MARK: - Images
+    // MARK: - Translate Several Texts
 
-    /// The endpoint translates text only.
-    func sendPromptWithImage(
-        _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
-    ) async throws -> String {
-        throw AppError.imageNotSupported(provider)
+    /// The endpoint takes one text per request, so the texts travel as lines of a single text.
+    /// If Google does not return the same number of lines, each text is translated on its own.
+    func translate(
+        _ texts: [String], into languageCode: String, apiKey: String
+    ) async throws -> [String] {
+        let lines = texts.map { $0.replacingOccurrences(of: "\n", with: " ") }
+        let joinedTranslation = try await sendPrompt(
+            lines.joined(separator: "\n"), model: languageCode, apiKey: apiKey, webSearch: false
+        )
+        let translations = joinedTranslation.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        if translations.count == texts.count {
+            return translations
+        }
+
+        var separateTranslations: [String] = []
+        for line in lines {
+            separateTranslations.append(
+                try await sendPrompt(line, model: languageCode, apiKey: apiKey, webSearch: false)
+            )
+        }
+        return separateTranslations
     }
 
     // MARK: - Helpers

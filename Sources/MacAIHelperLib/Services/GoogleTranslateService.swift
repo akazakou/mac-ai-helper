@@ -4,12 +4,14 @@
 
 import Foundation
 
-struct GoogleTranslateService: AIServiceProtocol {
+struct GoogleTranslateService: TranslationServiceProtocol {
     let provider: AIProvider = .googleTranslate
 
     /// Language the names in the languages list are written in
     private static let languageNamesLocale = "en"
     private static let apiKeyHeader = "X-goog-api-key"
+    /// The API accepts at most 128 texts per request
+    private static let maxTextsPerRequest = 100
 
     // MARK: - Fetch Languages
 
@@ -37,23 +39,44 @@ struct GoogleTranslateService: AIServiceProtocol {
 
     // MARK: - Translate Text
 
-    /// POST /language/translate/v2 — translates the text into the target language given as `model`.
+    /// Translates the text into the target language given as `model`.
     /// The source language is detected by Google. Web search does not apply to translation.
     // ponytail: one request per text, Google rejects very long texts; split into chunks if users hit the limit.
     func sendPrompt(
         _ prompt: String, model: String, apiKey: String, webSearch: Bool
     ) async throws -> String {
+        guard let translation = try await translate([prompt], into: model, apiKey: apiKey).first else {
+            throw AppError.decodingError("No translation in Google Translate response")
+        }
+        return translation
+    }
+
+    func translate(
+        _ texts: [String], into languageCode: String, apiKey: String
+    ) async throws -> [String] {
+        var translations: [String] = []
+        for batchStart in stride(from: 0, to: texts.count, by: Self.maxTextsPerRequest) {
+            let batch = Array(texts[batchStart..<min(batchStart + Self.maxTextsPerRequest, texts.count)])
+            translations += try await translateBatch(batch, into: languageCode, apiKey: apiKey)
+        }
+        return translations
+    }
+
+    /// POST /language/translate/v2 — translates up to maxTextsPerRequest texts in one request.
+    private func translateBatch(
+        _ texts: [String], into languageCode: String, apiKey: String
+    ) async throws -> [String] {
         var request = authorizedRequest(url: provider.baseURL, apiKey: apiKey)
         request.httpMethod = "POST"
         // "text" keeps the translation free of HTML entities (the API default format is HTML).
         request.httpBody = try JSONEncoder().encode(
-            GoogleTranslateRequest(q: prompt, target: model, format: "text")
+            GoogleTranslateRequest(q: texts, target: languageCode, format: "text")
         )
 
         let (data, response) = try await AIRequestLogger.perform(
             request,
             metadata: AIRequestLogger.Metadata(
-                provider: provider, model: model, webSearch: false, hasImage: false,
+                provider: provider, model: languageCode, webSearch: false, hasImage: false,
                 purpose: "translation"
             )
         )
@@ -62,19 +85,10 @@ struct GoogleTranslateService: AIServiceProtocol {
         let decoded = try JSONDecoder().decode(
             GoogleTranslateResponse<GoogleTranslateTranslations>.self, from: data
         )
-        guard let translation = decoded.data.translations.first else {
-            throw AppError.decodingError("No translation in Google Translate response")
+        guard decoded.data.translations.count == texts.count else {
+            throw AppError.decodingError("Google Translate returned an unexpected number of translations")
         }
-        return translation.translatedText
-    }
-
-    // MARK: - Images
-
-    /// The Cloud Translation API translates text only.
-    func sendPromptWithImage(
-        _ prompt: String, imageData: Data, model: String, apiKey: String, webSearch: Bool
-    ) async throws -> String {
-        throw AppError.imageNotSupported(provider)
+        return decoded.data.translations.map(\.translatedText)
     }
 
     // MARK: - Helpers
@@ -104,8 +118,8 @@ struct GoogleTranslateService: AIServiceProtocol {
 // MARK: - Request and Response Types
 
 private struct GoogleTranslateRequest: Encodable {
-    /// Text to translate ("q" is the field name the API requires)
-    let q: String
+    /// Texts to translate ("q" is the field name the API requires)
+    let q: [String]
     let target: String
     let format: String
 }

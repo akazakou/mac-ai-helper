@@ -1,5 +1,5 @@
 // ResultViewModel.swift
-// Manages AI response display and copy-to-clipboard functionality.
+// Manages AI response display, copy-to-clipboard and saving of translated images.
 
 import Foundation
 
@@ -12,18 +12,27 @@ final class ResultViewModel {
     /// Whether the response was recently copied (for UI feedback)
     var copied = false
 
+    /// Whether the translated image was recently saved (for UI feedback)
+    var saved = false
+
+    /// Why the last attempt to save the translated image failed
+    var saveErrorMessage: String?
+
+    /// How long the "Copied!" and "Saved!" confirmations stay visible
+    private static let confirmationDuration: Duration = .seconds(2)
+
     init(appState: AppState) {
         self.appState = appState
     }
 
-    /// The AI response text to display
-    var responseText: String {
-        appState.aiResponse ?? ""
+    /// The response to display
+    var response: PromptResponse? {
+        appState.response
     }
 
-    /// Whether the response is plain text (a translation) rather than Markdown
-    var isPlainText: Bool {
-        appState.isResponsePlainText
+    /// Whether there is something to copy
+    var canCopy: Bool {
+        response != nil && response?.text != ""
     }
 
     /// Whether the app is waiting for an AI response
@@ -36,23 +45,46 @@ final class ResultViewModel {
         appState.lastError
     }
 
-    /// Copies the AI response text to the system clipboard.
+    /// Copies the response (text or translated image) to the system clipboard.
     func copyResponse() {
-        guard !responseText.isEmpty else { return }
-        PasteboardService.writeText(responseText)
+        guard canCopy, let response else { return }
+        switch response {
+        case .markdown(let text), .plainText(let text):
+            PasteboardService.writeText(text)
+        case .image(let pngData):
+            PasteboardService.writeImage(pngData)
+        }
         copied = true
 
         // Reset the copied state after a brief delay for UI feedback
         Task {
-            try? await Task.sleep(for: .seconds(2))
+            try? await Task.sleep(for: Self.confirmationDuration)
             copied = false
+        }
+    }
+
+    /// Writes the translated image to the file the user picked.
+    func saveImage(to url: URL) {
+        guard case .image(let pngData) = response else { return }
+        do {
+            try pngData.write(to: url, options: .atomic)
+        } catch {
+            saveErrorMessage = "Failed to save the image: \(error.localizedDescription)"
+            return
+        }
+        saveErrorMessage = nil
+        saved = true
+
+        Task {
+            try? await Task.sleep(for: Self.confirmationDuration)
+            saved = false
         }
     }
 
     /// Dismisses the result view and resets state.
     func dismiss() {
         appState.showingResult = false
-        appState.aiResponse = nil
+        appState.response = nil
         appState.lastError = nil
     }
 }
