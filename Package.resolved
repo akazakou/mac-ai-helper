@@ -1,5 +1,5 @@
 {
-  "originHash" : "af7cb416b0a331fe08676c2165b2ec9d6e52c4e79aca2d67e9215a4ed2255590",
+  "originHash" : "92c18e4ddebce86403b3b5d87172f6c724a366ff6678ffc5ea4db1a103befe55",
   "pins" : [
     {
       "identity" : "keyboardshortcuts",
@@ -11,30 +11,12 @@
       }
     },
     {
-      "identity" : "networkimage",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gonzalezreal/NetworkImage",
-      "state" : {
-        "revision" : "2849f5323265386e200484b0d0f896e73c3411b9",
-        "version" : "6.0.1"
-      }
-    },
-    {
       "identity" : "swift-cmark",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-cmark",
       "state" : {
         "revision" : "08ddb528923cc1a6527e02b7a1aee9e516ca749a",
         "version" : "0.9.0"
-      }
-    },
-    {
-      "identity" : "swift-markdown-ui",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gonzalezreal/swift-markdown-ui",
-      "state" : {
-        "revision" : "5f613358148239d0292c0cef674a3c2314737f9e",
-        "version" : "2.4.1"
       }
     }
   ],

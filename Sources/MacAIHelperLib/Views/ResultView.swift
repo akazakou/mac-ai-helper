@@ -3,7 +3,6 @@
 // with copy-to-clipboard and save-image actions.
 
 import AppKit
-import MarkdownUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -34,35 +33,35 @@ struct ResultView: View {
 
     // MARK: - Response View
 
+    /// Translations are shown verbatim: Markdown would join their lines and
+    /// treat characters such as * or # as formatting.
+    @ViewBuilder
     private var responseView: some View {
+        switch viewModel.response {
+        case .plainText(let text):
+            scrollable(
+                Text(text)
+                    .font(.system(size: NSFont.systemFontSize))
+                    .textSelection(.enabled)
+            )
+        case .markdown(let text):
+            // The web view scrolls by itself and lets a selection span paragraphs.
+            MarkdownWebView(markdown: text)
+                .frame(minHeight: 100, maxHeight: .infinity)
+        case .image(let pngData):
+            scrollable(translatedImage(pngData))
+        case nil:
+            scrollable(EmptyView())
+        }
+    }
+
+    private func scrollable(_ content: some View) -> some View {
         ScrollView {
-            responseContent
-                .textSelection(.enabled)
+            content
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
         }
         .frame(minHeight: 100, maxHeight: .infinity)
-    }
-
-    /// Translations are shown verbatim: Markdown would join their lines and
-    /// treat characters such as * or # as formatting.
-    @ViewBuilder
-    private var responseContent: some View {
-        switch viewModel.response {
-        case .plainText(let text):
-            Text(text)
-                .font(.system(size: NSFont.systemFontSize))
-        case .markdown(let text):
-            Markdown(text)
-                .markdownTextStyle(\.text) {
-                    FontSize(NSFont.systemFontSize)
-                }
-                .markdownTheme(.gitHub)
-        case .image(let pngData):
-            translatedImage(pngData)
-        case nil:
-            EmptyView()
-        }
     }
 
     /// Shows the image no larger than the screenshot was on screen, shrinking it to the window width.

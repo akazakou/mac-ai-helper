@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.2.2"),
-        .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.0"),
+        .package(url: "https://github.com/swiftlang/swift-cmark", from: "0.9.0"),
     ],
     targets: [
         // Library target containing all business logic, views, models, and services.
@@ -15,7 +15,8 @@ let package = Package(
             name: "MacAIHelperLib",
             dependencies: [
                 "KeyboardShortcuts",
-                .product(name: "MarkdownUI", package: "swift-markdown-ui"),
+                .product(name: "cmark-gfm", package: "swift-cmark"),
+                .product(name: "cmark-gfm-extensions", package: "swift-cmark"),
             ],
             path: "Sources/MacAIHelperLib"
         ),
