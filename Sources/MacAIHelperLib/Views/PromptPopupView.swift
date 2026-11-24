@@ -1,13 +1,16 @@
 // PromptPopupView.swift
 // Floating popup showing the prompt list, each prompt labelled with its own model.
 // Appears when the user triggers a text or screenshot shortcut.
+// The window itself supplies the title bar; PopupPinButton is placed into it.
 
-import AppKit
 import SwiftUI
 
 struct PromptPopupView: View {
     @Bindable var viewModel: PromptPopupViewModel
     let appState: AppState
+
+    /// State of the popup window this view is shown in
+    let session: PopupSession
 
     /// Callback to dismiss the popup
     var onDismiss: (() -> Void)?
@@ -15,23 +18,13 @@ struct PromptPopupView: View {
     /// Callback fired when a prompt starts processing (popup switches to response mode)
     var onResponseStarted: (() -> Void)?
 
-    /// Pin is offered only while waiting for or showing a response
-    private var isResponseVisible: Bool {
-        appState.isLoading || appState.showingResult
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            headerView
-
-            Divider()
-
             // Content: loading, error, or prompt list
-            if appState.isLoading {
+            if session.isLoading {
                 loadingView
-            } else if appState.showingResult {
-                ResultView(viewModel: ResultViewModel(appState: appState)) {
+            } else if session.showingResult {
+                ResultView(viewModel: ResultViewModel(session: session)) {
                     onDismiss?()
                 }
             } else {
@@ -39,59 +32,14 @@ struct PromptPopupView: View {
             }
         }
         .frame(minWidth: 320, maxWidth: .infinity, minHeight: 200, maxHeight: .infinity, alignment: .top)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
         .task {
             await viewModel.loadModelsIfNeeded()
         }
-        .onChange(of: appState.isLoading) { _, isLoading in
+        .onChange(of: session.isLoading) { _, isLoading in
             if isLoading {
                 onResponseStarted?()
             }
         }
-    }
-
-    // MARK: - Header
-
-    private var headerView: some View {
-        HStack {
-            Image(systemName: "brain.head.profile")
-                .foregroundStyle(Color.accentColor)
-
-            Text("Mac AI Helper")
-                .font(.headline)
-
-            Spacer()
-
-            if isResponseVisible {
-                pinButton
-            }
-
-            // Close button
-            Button {
-                onDismiss?()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(12)
-        // The header doubles as a drag handle; SwiftUI content covers the whole
-        // window, so isMovableByWindowBackground never sees a background click.
-        .background(WindowDragArea())
-    }
-
-    private var pinButton: some View {
-        Button {
-            appState.isPopupPinned.toggle()
-        } label: {
-            Image(systemName: appState.isPopupPinned ? "pin.fill" : "pin")
-                .foregroundStyle(appState.isPopupPinned ? Color.accentColor : .secondary)
-        }
-        .buttonStyle(.plain)
-        .help(appState.isPopupPinned ? "Unpin window" : "Pin window to keep it open when switching apps")
     }
 
     // MARK: - Prompt List
@@ -100,7 +48,7 @@ struct PromptPopupView: View {
         ScrollView {
             VStack(spacing: 2) {
                 // Show what content was captured
-                if appState.capturedText != nil {
+                if session.capturedText != nil {
                     HStack {
                         Image(systemName: "doc.text")
                         Text("Text captured from clipboard")
@@ -110,7 +58,7 @@ struct PromptPopupView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
-                } else if appState.capturedImage != nil {
+                } else if session.capturedImage != nil {
                     HStack {
                         Image(systemName: "photo")
                         Text("Screenshot captured")
@@ -123,7 +71,7 @@ struct PromptPopupView: View {
                 }
 
                 // Error display
-                if let error = appState.lastError {
+                if let error = session.lastError {
                     HStack {
                         Image(systemName: "exclamationmark.triangle")
                         Text(error)
@@ -140,15 +88,7 @@ struct PromptPopupView: View {
                     PromptButton(
                         prompt: prompt, modelAvailability: viewModel.availability(of: prompt)
                     ) {
-                        Task {
-                            if let imageData = appState.capturedImage {
-                                await viewModel.selectPromptWithImage(
-                                    prompt, imageData: imageData
-                                )
-                            } else {
-                                await viewModel.selectPrompt(prompt)
-                            }
-                        }
+                        viewModel.start(prompt)
                     }
                 }
 
@@ -187,19 +127,28 @@ struct PromptPopupView: View {
     }
 }
 
-// MARK: - Window Drag Area
+// MARK: - Pin Button
 
-/// Transparent view that moves its window when dragged.
-/// ponytail: AppKit bridge because WindowDragGesture requires macOS 15; swap once the target is raised.
-private struct WindowDragArea: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { DragView() }
+/// Title bar button that keeps the popup open when focus moves elsewhere.
+struct PopupPinButton: View {
+    let session: PopupSession
 
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    private static let trailingPadding: CGFloat = 10
 
-    private final class DragView: NSView {
-        override func mouseDown(with event: NSEvent) {
-            window?.performDrag(with: event)
+    var body: some View {
+        Button {
+            session.isPinned.toggle()
+        } label: {
+            Image(systemName: session.isPinned ? "pin.fill" : "pin")
+                .foregroundStyle(session.isPinned ? Color.accentColor : .secondary)
         }
+        .buttonStyle(.plain)
+        .help(session.isPinned ? "Unpin window" : "Pin window to keep it open when switching apps")
+        // Pin is offered only while waiting for or showing a response.
+        // Hidden rather than removed, so the title bar item keeps its size.
+        .opacity(session.isResponseVisible ? 1 : 0)
+        .disabled(!session.isResponseVisible)
+        .padding(.trailing, Self.trailingPadding)
     }
 }
 

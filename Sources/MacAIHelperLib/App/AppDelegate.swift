@@ -24,8 +24,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Global hotkey monitoring service
     private var hotkeyService: HotkeyService?
 
-    /// Floating panel for prompt popup
-    private var floatingPanel: FloatingPanelController?
+    /// Open prompt popups: the pinned ones and the most recent one
+    private var popups: [FloatingPanelController] = []
 
     /// Settings window (retained to keep it alive)
     private var settingsWindow: NSWindow?
@@ -137,17 +137,17 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             let text = await PasteboardService.copySelectedText()
 
             if let text, !text.isEmpty {
-                appState.capturedText = text
+                showPromptPopup(PopupSession(capturedText: text))
             } else {
                 // Show the popup anyway so the user gets visual feedback
                 // that the shortcut worked, even if no text was selected.
                 Log.hotkey.debug("No text captured — showing prompt popup with empty state")
-                appState.capturedText = nil
-                appState.lastError = "No text was captured. Select text in another app and try again."
+                showPromptPopup(
+                    PopupSession(
+                        lastError: "No text was captured. Select text in another app and try again."
+                    )
+                )
             }
-
-            appState.capturedImage = nil
-            showPromptPopup()
         }
     }
 
@@ -160,9 +160,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             do {
                 let imageData = try await ScreenCaptureService.captureRegion()
-                appState.capturedImage = imageData
-                appState.capturedText = nil
-                showPromptPopup()
+                showPromptPopup(PopupSession(capturedImage: imageData))
             } catch AppError.screenCaptureCancelled {
                 Log.capture.debug("Screenshot capture cancelled by user")
             } catch {
@@ -203,11 +201,24 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         openSettings(tab: .apiKeys)
     }
 
-    private func showPromptPopup() {
-        if floatingPanel == nil {
-            floatingPanel = FloatingPanelController(appState: appState)
+    /// Opens a new popup. Popups the user pinned (or minimized) stay open and keep working.
+    private func showPromptPopup(_ session: PopupSession) {
+        popups.filter { !$0.staysOpen }.forEach { $0.close() }
+
+        let popup = FloatingPanelController(appState: appState, session: session) {
+            [weak self] closedPopup in
+            self?.forgetPopup(closedPopup)
         }
-        floatingPanel?.showPopup()
+        popup.show(cascadeIndex: popups.count)
+        popups.append(popup)
+    }
+
+    private func forgetPopup(_ popup: FloatingPanelController) {
+        popups.removeAll { $0 === popup }
+        guard popups.isEmpty else { return }
+
+        // Back to menu-bar-only: no Dock icon
+        NSApp.setActivationPolicy(.accessory)
     }
 }
 
@@ -217,16 +228,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 @Observable
 @MainActor
 public final class AppState {
-    public var capturedText: String?
-    public var capturedImage: Data?
-    /// Result of the last prompt: an AI answer, a translation, or a translated screenshot
-    public var response: PromptResponse?
-    public var isLoading = false
     public var lastError: String?
-    public var showingResult = false
-
-    /// Whether the user pinned the popup so it stays open when focus moves elsewhere
-    public var isPopupPinned = false
 
     /// Currently selected tab in the Settings window
     public var selectedSettingsTab: SettingsTab = .prompts
