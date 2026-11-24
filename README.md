@@ -32,7 +32,8 @@ Free and open source under [GPL-3.0](LICENSE).
 - **Dynamic Model Listing** — Fetches available models from each provider's API
 - **Per-Prompt Models** — Each prompt uses its own model, picked in the prompt editor; outdated or unreachable models are flagged with badges
 - **Custom Prompts** — Configure unlimited AI prompt templates
-- **Secure Key Storage** — API keys stored in macOS Keychain
+- **Local Key Storage** — API keys stay on your Mac, in a file only your user account can read
+- **In-App Updates** — Checks GitHub Releases daily and installs a new version in one click
 - **Native UI** — Built with SwiftUI, uses floating panels for the popup
 
 ![Custom prompts, your own API keys, and global shortcuts](docs/media/customize.png)
@@ -46,6 +47,14 @@ Free and open source under [GPL-3.0](LICENSE).
    ```bash
    xattr -dr com.apple.quarantine /Applications/MacAIHelper.app
    ```
+
+### Updates
+
+The app checks GitHub Releases at launch and once a day. When a newer version exists, the menu bar
+menu shows **Update to X.Y.Z and Relaunch** (also **Settings → About → Check for Updates**).
+An update installed this way needs no **Open Anyway** step and keeps your permissions.
+It works when the app was installed by drag and drop; a copy installed by the `.pkg` belongs to
+`root`, so update it by downloading the new package.
 
 ## Setup
 
@@ -118,9 +127,10 @@ Version mapping: `CFBundleShortVersionString` comes from the tag without the `-s
 ### Signing certificate
 
 Releases are signed with a persistent **self-signed** code-signing certificate stored in GitHub Secrets.
-macOS ties Accessibility / Screen Recording grants and Keychain access to the signing certificate,
-so a stable certificate keeps users' permissions across updates. It does not replace Apple notarization:
-Gatekeeper still asks users to confirm each downloaded version once.
+macOS ties Accessibility / Screen Recording grants to the signing certificate,
+so a stable certificate keeps users' permissions across updates. The in-app updater also installs
+only a release signed with the same certificate as the running app. It does not replace Apple notarization:
+Gatekeeper still asks users to confirm each version downloaded in a browser once.
 
 One-time setup:
 
@@ -136,8 +146,8 @@ gh secret set MACOS_SIGNING_CERT_PASSWORD < ~/.mac-ai-helper-signing/signing-cer
 | `MACOS_SIGNING_CERT_PASSWORD` | `.p12` password |
 
 - Back up `~/.mac-ai-helper-signing/` in a password manager. Anyone holding the `.p12` can sign apps that inherit users' permission grants.
-- Replacing the certificate resets every user's permissions once.
-- Without the secrets (e.g. in forks) the workflow falls back to ad-hoc signing and prints a warning; permissions then reset on every update.
+- Replacing the certificate resets every user's permissions once and stops in-app updates for installed copies (they must be updated by hand once).
+- Without the secrets (e.g. in forks) the workflow falls back to ad-hoc signing and prints a warning; permissions then reset on every update and in-app updates are refused.
 
 ### Self-hosted runner
 
@@ -185,7 +195,7 @@ Sources/MacAIHelper/
 Sources/MacAIHelperLib/
 ├── App/                    # AppDelegate, FloatingPanelController, AppState
 ├── Models/                 # Data models (AIProvider, Prompt, AppSettings, etc.)
-├── Services/               # Business logic (AI APIs, Keychain, Hotkeys, etc.)
+├── Services/               # Business logic (AI APIs, API key store, Updates, Hotkeys, etc.)
 ├── ViewModels/             # Observable state management
 └── Views/                  # SwiftUI views (Settings, Popup, Result)
 ```
@@ -194,7 +204,8 @@ Sources/MacAIHelperLib/
 
 - **HotkeyService** — Global shortcuts via KeyboardShortcuts (Carbon RegisterEventHotKey)
 - **AIServiceRouter** — Routes requests to OpenAI, Anthropic, Gemini, OpenRouter, or Google Translate (official API or free endpoint)
-- **KeychainService** — Secure API key storage in macOS Keychain
+- **APIKeyStore** — API key storage in an owner-only JSON file in Application Support
+- **UpdateService** — In-app updates from GitHub Releases with code signature verification
 - **SettingsService** — JSON-based settings persistence in Application Support
 - **FloatingPanelController** — NSPanel-based floating popup window
 - **ScreenCaptureService** — Interactive screen region capture via ScreenCaptureKit
@@ -202,7 +213,7 @@ Sources/MacAIHelperLib/
 ### Data Persistence
 
 - **Settings** (`settings.json`) — Stored in `~/Library/Application Support/MacAIHelper/`.
-- **API Keys** — Stored in macOS Keychain. Access survives updates as long as releases are signed with the same certificate.
+- **API Keys** (`api-keys.json`) — Stored in the same folder, readable by your user account only. Not in the Keychain: macOS ties Keychain access to the exact binary of a self-signed app and asked for the login password after every update. Keys saved by versions up to 1.1.0 are moved out of the Keychain on first launch.
 - **Keyboard Shortcuts & panel size** — Stored in the app's UserDefaults.
 
 ## Permissions
@@ -229,7 +240,7 @@ Screen Recording usually requires relaunching the app after it is granted.
 See [PRIVACY.md](PRIVACY.md).
 
 - No data collected or transmitted to Castloud servers
-- API keys stored locally in macOS Keychain
+- API keys stored locally in a file only your user account can read
 - Content sent directly to user-configured AI providers
 - No analytics or tracking
 

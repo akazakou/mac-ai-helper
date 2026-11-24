@@ -1,6 +1,6 @@
 // APIKeyEntry.swift
-// Metadata for an API key stored in the Keychain.
-// The actual key value is never persisted in settings — only in the Keychain.
+// Metadata for an API key stored in APIKeyStore.
+// The actual key value is never persisted in settings — only in the key store file.
 
 import Foundation
 

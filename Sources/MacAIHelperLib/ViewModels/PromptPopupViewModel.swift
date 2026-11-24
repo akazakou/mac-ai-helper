@@ -74,7 +74,7 @@ final class PromptPopupViewModel {
 
         do {
             let model = try usableModel(for: prompt)
-            let apiKey = try KeychainService.apiKey(
+            let apiKey = try APIKeyStore().apiKey(
                 for: model.provider, entries: appState.settings.apiKeyEntries
             )
             appState.response = try await request(model, apiKey)

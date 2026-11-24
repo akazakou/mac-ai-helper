@@ -18,6 +18,18 @@ public struct MenuBarView: View {
             Divider()
         }
 
+        // Newer release found by the automatic check
+        if case .available(let release) = appState.updates.status {
+            Button("Update to \(release.version) and Relaunch") {
+                Task {
+                    await appState.updates.install(release)
+                    // Reached only when the install failed: the About tab shows why
+                    AppDelegate.shared?.openSettings(tab: .about)
+                }
+            }
+            Divider()
+        }
+
         // Sponsor (opens GitHub Sponsors in default browser)
         Button("Sponsor ❤️") {
             NSWorkspace.shared.open(AppConstants.sponsorURL)

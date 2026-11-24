@@ -1,13 +1,18 @@
-// KeychainServiceTests.swift
-// Tests for KeychainService CRUD operations.
+// APIKeyStoreTests.swift
+// Tests for APIKeyStore CRUD operations.
 
 import Foundation
 import Testing
 
 @testable import MacAIHelperLib
 
-@Suite("KeychainService Tests")
-struct KeychainServiceTests {
+@Suite("APIKeyStore Tests")
+struct APIKeyStoreTests {
+    /// A temporary directory per test keeps the user's real API keys untouched
+    private let store = APIKeyStore(
+        directory: FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacAIHelperTests-\(UUID().uuidString)", isDirectory: true)
+    )
 
     @Test("Save and read key round-trip")
     func saveAndReadKey() throws {
@@ -15,32 +20,32 @@ struct KeychainServiceTests {
         let testKey = "test-api-key-\(UUID().uuidString)"
 
         // Save
-        try KeychainService.saveKey(testKey, for: entryId)
+        try store.saveKey(testKey, for: entryId)
 
         // Read
-        let retrieved = try KeychainService.readKey(for: entryId)
+        let retrieved = try store.readKey(for: entryId)
         #expect(retrieved == testKey)
 
         // Cleanup
-        try KeychainService.deleteKey(for: entryId)
+        try store.deleteKey(for: entryId)
     }
 
     @Test("Reading non-existent key returns nil")
     func readNonExistentKey() throws {
         let entryId = UUID()
-        let result = try KeychainService.readKey(for: entryId)
+        let result = try store.readKey(for: entryId)
         #expect(result == nil)
     }
 
-    @Test("Delete key removes it from Keychain")
+    @Test("Delete key removes it from the store")
     func deleteKey() throws {
         let entryId = UUID()
         let testKey = "test-key-to-delete"
 
-        try KeychainService.saveKey(testKey, for: entryId)
-        try KeychainService.deleteKey(for: entryId)
+        try store.saveKey(testKey, for: entryId)
+        try store.deleteKey(for: entryId)
 
-        let result = try KeychainService.readKey(for: entryId)
+        let result = try store.readKey(for: entryId)
         #expect(result == nil)
     }
 
@@ -50,14 +55,14 @@ struct KeychainServiceTests {
         let originalKey = "original-key"
         let updatedKey = "updated-key"
 
-        try KeychainService.saveKey(originalKey, for: entryId)
-        try KeychainService.updateKey(updatedKey, for: entryId)
+        try store.saveKey(originalKey, for: entryId)
+        try store.updateKey(updatedKey, for: entryId)
 
-        let retrieved = try KeychainService.readKey(for: entryId)
+        let retrieved = try store.readKey(for: entryId)
         #expect(retrieved == updatedKey)
 
         // Cleanup
-        try KeychainService.deleteKey(for: entryId)
+        try store.deleteKey(for: entryId)
     }
 
     @Test("Save overwrites existing key")
@@ -66,21 +71,21 @@ struct KeychainServiceTests {
         let firstKey = "first-key"
         let secondKey = "second-key"
 
-        try KeychainService.saveKey(firstKey, for: entryId)
-        try KeychainService.saveKey(secondKey, for: entryId)
+        try store.saveKey(firstKey, for: entryId)
+        try store.saveKey(secondKey, for: entryId)
 
-        let retrieved = try KeychainService.readKey(for: entryId)
+        let retrieved = try store.readKey(for: entryId)
         #expect(retrieved == secondKey)
 
         // Cleanup
-        try KeychainService.deleteKey(for: entryId)
+        try store.deleteKey(for: entryId)
     }
 
     @Test("Delete non-existent key does not throw")
     func deleteNonExistentKey() throws {
         let entryId = UUID()
         // Should not throw for non-existent keys
-        try KeychainService.deleteKey(for: entryId)
+        try store.deleteKey(for: entryId)
     }
 
     @Test("API key lookup for provider")
@@ -89,19 +94,19 @@ struct KeychainServiceTests {
         let testKey = "test-openai-key"
         let entry = APIKeyEntry(id: entryId, provider: .openAI, label: "Test")
 
-        try KeychainService.saveKey(testKey, for: entryId)
+        try store.saveKey(testKey, for: entryId)
 
-        let result = try KeychainService.apiKey(for: .openAI, entries: [entry])
+        let result = try store.apiKey(for: .openAI, entries: [entry])
         #expect(result == testKey)
 
         // Cleanup
-        try KeychainService.deleteKey(for: entryId)
+        try store.deleteKey(for: entryId)
     }
 
     @Test("API key lookup throws when no entry exists")
     func apiKeyThrowsForMissingProvider() {
         #expect(throws: AppError.self) {
-            _ = try KeychainService.apiKey(for: .anthropic, entries: [])
+            _ = try store.apiKey(for: .anthropic, entries: [])
         }
     }
 }
