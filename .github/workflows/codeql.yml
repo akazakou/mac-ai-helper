@@ -1,0 +1,64 @@
+# ==============================================================================
+# CodeQL code scanning for Mac AI Helper.
+#
+# Swift is built and analyzed on the maintainer's self-hosted Apple Silicon
+# runner (label `mac-ai-helper-release`), the workflow files on a GitHub-hosted
+# runner.
+#
+# Starts only on pushes to `master`, weekly and on manual runs by
+# collaborators — never add `pull_request` triggers to this workflow: the Swift
+# job builds the checked-out code on the self-hosted runner.
+# ==============================================================================
+
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+  schedule:
+    # Mondays 19:00 UTC: 1 pm Central Standard Time, 2 pm during daylight saving time.
+    - cron: '0 19 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: swift
+            build-mode: manual
+            runner: [self-hosted, macOS, ARM64, mac-ai-helper-release]
+          - language: actions
+            build-mode: none
+            runner: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # CodeQL analyzes only what is compiled here. Checkout removes `.build`,
+      # so every run is a full build. One architecture is enough for analysis.
+      - name: Build Swift package
+        if: matrix.build-mode == 'manual'
+        run: swift build --arch arm64
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

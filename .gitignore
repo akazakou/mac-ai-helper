@@ -23,7 +23,6 @@ MacAIHelper.xcodeproj/
 # Swift Package Manager
 .swiftpm/
 Packages/
-Package.resolved
 
 # macOS
 .DS_Store
