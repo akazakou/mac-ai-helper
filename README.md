@@ -78,13 +78,22 @@ rate-limit or change it at any time.
 3. Settings → API Keys → Add API Key → provider **Google Translate**
 4. Settings → Prompts → Add Prompt → pick `[Google Translate] <language>` as the model
 
+**Better translations with the Translation LLM** — enter your Google Cloud **project ID** when you add the
+Google Translate key. Translations then use Google's Translation LLM, which handles context and wording better than
+the standard model (the free endpoint and the plain API key use the standard one). It costs $10 per million characters
+in and $10 per million out. The app makes a test translation when you add the key, so a wrong project ID is reported
+right away. For a language pair the Translation LLM doesn't cover, the standard model is used.
+
 The selected text is translated as is (no template), and the source language is detected automatically.
 
 **Screenshots** — press `⌃⌘C`, select a region and pick a Google Translate prompt. The text is recognized on your Mac
 (Apple Vision), only the recognized text is sent to Google, and the translation is drawn over the original text.
 Use **Save Image…** to store the result as a PNG, or **Copy** to put it on the clipboard.
-Google offers no API for its own image translation, so the result is simpler than on translate.google.com:
-text is covered with a flat background color, which shows on photos and gradients.
+The translation keeps the look of the original: font size and weight are measured from the text's pixels,
+centered labels (buttons, tabs) stay centered, and a longer translation may use free space next to the text before it shrinks.
+All texts of a screenshot are translated together, so labels and sentences get their context.
+Google offers no API for its own image translation, so text on photos leaves a smoothed patch
+(flat colors and gradients are covered cleanly), and the system font replaces the original font.
 The very first screenshot translation on a Mac can take up to half a minute while macOS prepares its text recognition models.
 A Gemini (AI Studio) key works only if Cloud Translation API is enabled for that key's project.
 

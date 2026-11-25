@@ -16,6 +16,21 @@ struct AIServiceRouter: Sendable {
         }
     }
 
+    /// Returns the service of a translation provider, configured from its API key entry,
+    /// or nil for an AI model provider.
+    static func translationService(
+        for provider: AIProvider, entries: [APIKeyEntry]
+    ) -> TranslationServiceProtocol? {
+        switch provider {
+        case .googleTranslate:
+            GoogleTranslateService(projectId: entries.first { $0.provider == provider }?.projectId)
+        case .googleTranslateFree:
+            GoogleTranslateFreeService()
+        case .openAI, .anthropic, .gemini, .openRouter:
+            nil
+        }
+    }
+
     /// Fetches available models from the specified provider.
     static func fetchModels(
         provider: AIProvider, apiKey: String

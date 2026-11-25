@@ -32,6 +32,20 @@ protocol TranslationServiceProtocol: AIServiceProtocol {
 }
 
 extension TranslationServiceProtocol {
+    /// Translates several texts as the lines of one text, so each is translated in the context
+    /// of the others (menu items, labels and sentences of one screenshot).
+    /// Returns nil for a single text, or when the translation has a different number of lines.
+    func translateAsLines(
+        _ texts: [String], using translateText: (String) async throws -> String
+    ) async throws -> [String]? {
+        guard texts.count > 1 else { return nil }
+        let lines = texts.map { $0.replacingOccurrences(of: "\n", with: " ") }
+        let translations = try await translateText(lines.joined(separator: "\n"))
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        return translations.count == texts.count ? translations : nil
+    }
+
     /// Translation services return text only; screenshots are handled by ImageTranslationService,
     /// which recognizes the text first.
     func sendPromptWithImage(

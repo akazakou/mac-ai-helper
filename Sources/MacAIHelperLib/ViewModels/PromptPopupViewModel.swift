@@ -58,13 +58,17 @@ final class PromptPopupViewModel {
         guard let text = session.capturedText else { return }
         await run(prompt) { model, apiKey in
             // Translation services translate the captured text itself, not an instruction about it.
-            let isTranslation = model.provider.isTranslationService
-            let answer = try await AIServiceRouter.sendPrompt(
-                isTranslation ? text : prompt.resolved(with: text),
-                model: model.id, provider: model.provider, apiKey: apiKey,
-                webSearch: prompt.webSearchEnabled
+            if let translator = translationService(for: model) {
+                return .plainText(
+                    try await translator.sendPrompt(text, model: model.id, apiKey: apiKey, webSearch: false)
+                )
+            }
+            return .markdown(
+                try await AIServiceRouter.sendPrompt(
+                    prompt.resolved(with: text), model: model.id, provider: model.provider,
+                    apiKey: apiKey, webSearch: prompt.webSearchEnabled
+                )
             )
-            return isTranslation ? .plainText(answer) : .markdown(answer)
         }
     }
 
@@ -72,10 +76,9 @@ final class PromptPopupViewModel {
     private func selectPromptWithImage(_ prompt: Prompt, imageData: Data) async {
         let resolvedPrompt = prompt.resolved(with: "Analyze this image.")
         await run(prompt) { model, apiKey in
-            if model.provider.isTranslationService {
-                return .image(
-                    try await ImageTranslationService.translate(imageData, into: model, apiKey: apiKey)
-                )
+            if let translator = translationService(for: model) {
+                let imageTranslation = ImageTranslationService(translator: translator, apiKey: apiKey)
+                return .image(try await imageTranslation.translate(imageData, into: model.id))
             }
             return .markdown(
                 try await AIServiceRouter.sendPromptWithImage(
@@ -105,6 +108,13 @@ final class PromptPopupViewModel {
         } catch {
             session.lastError = error.localizedDescription
         }
+    }
+
+    /// The translation service of the model's provider, or nil for an AI model.
+    private func translationService(for model: AIModel) -> TranslationServiceProtocol? {
+        AIServiceRouter.translationService(
+            for: model.provider, entries: appState.settings.apiKeyEntries
+        )
     }
 
     /// Returns the prompt's model, or throws if it is missing or known to be outdated.

@@ -84,21 +84,16 @@ struct GoogleTranslateFreeService: TranslationServiceProtocol {
     func translate(
         _ texts: [String], into languageCode: String, apiKey: String
     ) async throws -> [String] {
-        let lines = texts.map { $0.replacingOccurrences(of: "\n", with: " ") }
-        let joinedTranslation = try await sendPrompt(
-            lines.joined(separator: "\n"), model: languageCode, apiKey: apiKey, webSearch: false
-        )
-        let translations = joinedTranslation.components(separatedBy: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-        if translations.count == texts.count {
+        let translateText = { (text: String) in
+            try await sendPrompt(text, model: languageCode, apiKey: apiKey, webSearch: false)
+        }
+        if let translations = try await translateAsLines(texts, using: translateText) {
             return translations
         }
 
         var separateTranslations: [String] = []
-        for line in lines {
-            separateTranslations.append(
-                try await sendPrompt(line, model: languageCode, apiKey: apiKey, webSearch: false)
-            )
+        for text in texts {
+            separateTranslations.append(try await translateText(text))
         }
         return separateTranslations
     }

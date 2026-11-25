@@ -10,13 +10,44 @@ struct RecognizedTextBlock: Sendable, Equatable {
     var text: String
     /// Bounding box in image pixels, origin in the bottom-left corner
     var frame: CGRect
-    /// Height of one text line in pixels, used to size the translated text
-    let lineHeight: CGFloat
+    /// Text of the first line; with its frame it gives the font size and baseline of the block
+    let firstLineText: String
+    /// Bounding box of the first line
+    let firstLineFrame: CGRect
+    /// Text of the last line; it decides whether the next line continues the paragraph
+    private(set) var lastLineText: String
+    /// Bounding box of the last line; with the first one it gives the line spacing
+    private(set) var lastLineFrame: CGRect
+    private(set) var lineCount = 1
 
     init(text: String, frame: CGRect) {
         self.text = text
         self.frame = frame
-        lineHeight = frame.height
+        firstLineText = text
+        firstLineFrame = frame
+        lastLineText = text
+        lastLineFrame = frame
+    }
+
+    /// Adds the next wrapped line. A word hyphenated across the lines is joined back together.
+    mutating func append(_ line: RecognizedTextBlock) {
+        let isHyphenated = lastLineText.last == "-" && line.text.first?.isLowercase == true
+        text = isHyphenated ? String(text.dropLast()) + line.text : text + " " + line.text
+        frame = frame.union(line.frame)
+        lastLineText = line.text
+        lastLineFrame = line.frame
+        lineCount += 1
+    }
+
+    /// Height of one text line in pixels
+    var lineHeight: CGFloat {
+        firstLineFrame.height
+    }
+
+    /// Distance between the baselines of neighboring lines, nil for a single line
+    var linePitch: CGFloat? {
+        guard lineCount > 1 else { return nil }
+        return (firstLineFrame.midY - lastLineFrame.midY) / CGFloat(lineCount - 1)
     }
 }
 
@@ -50,8 +81,8 @@ enum ImageTextRecognizer {
     private static let minWrappedLineLength = 20
     /// Lines of one paragraph have about the same height (ratio of the smaller to the larger).
     private static let minLineHeightRatio: CGFloat = 0.75
-    /// Largest gap between paragraph lines, in line heights.
-    private static let maxLineGap: CGFloat = 0.8
+    /// Largest gap between paragraph lines, in line heights. Wider gaps separate a heading from its text.
+    private static let maxLineGap: CGFloat = 0.55
     /// Deepest overlap of neighboring lines, in line heights.
     private static let maxLineOverlap: CGFloat = 0.3
     /// How far left edges of paragraph lines may differ, in line heights.
@@ -64,46 +95,35 @@ enum ImageTextRecognizer {
     // returns real paragraphs; switch to it once the deployment target allows.
     /// Joins lines that continue each other into paragraphs. Stand-alone lines stay as they are.
     static func groupedIntoParagraphs(_ lines: [RecognizedTextBlock]) -> [RecognizedTextBlock] {
-        var paragraphs: [Paragraph] = []
+        var paragraphs: [RecognizedTextBlock] = []
         // The origin is bottom-left, so the topmost line has the largest maxY.
         for line in lines.sorted(by: { $0.frame.maxY > $1.frame.maxY }) {
-            if let index = paragraphs.firstIndex(where: { isLine(line, continuing: $0.lastLine) }) {
+            if let index = paragraphs.firstIndex(where: { isLine(line, continuing: $0) }) {
                 paragraphs[index].append(line)
             } else {
-                paragraphs.append(Paragraph(block: line, lastLine: line))
+                paragraphs.append(line)
             }
         }
-        return paragraphs.map(\.block)
+        return paragraphs
     }
 
-    /// Whether `line` is the next wrapped line after `previous` in the same paragraph.
+    /// Whether `line` is the next wrapped line after the last line of `paragraph`.
     private static func isLine(
-        _ line: RecognizedTextBlock, continuing previous: RecognizedTextBlock
+        _ line: RecognizedTextBlock, continuing paragraph: RecognizedTextBlock
     ) -> Bool {
-        let lineHeight = previous.lineHeight
-        let endsSentence = previous.text.last.map(sentenceEndings.contains) ?? true
-        let isPreviousLineWrapped = previous.text.count >= minWrappedLineLength && !endsSentence
+        let previous = paragraph.lastLineFrame
+        let lineHeight = previous.height
+        let previousText = paragraph.lastLineText
+        let endsSentence = previousText.last.map(sentenceEndings.contains) ?? true
+        let isPreviousLineWrapped = previousText.count >= minWrappedLineLength && !endsSentence
         let hasSimilarHeight = min(lineHeight, line.lineHeight) / max(lineHeight, line.lineHeight)
             >= minLineHeightRatio
-        let gap = previous.frame.minY - line.frame.maxY
+        let gap = previous.minY - line.frame.maxY
         let isDirectlyBelow = gap <= maxLineGap * lineHeight && gap >= -maxLineOverlap * lineHeight
-        let isLeftAligned = abs(previous.frame.minX - line.frame.minX) <= maxLeftEdgeOffset * lineHeight
-        let fitsParagraphWidth = line.frame.maxX <= previous.frame.maxX + maxRightOverhang * lineHeight
+        let isLeftAligned = abs(previous.minX - line.frame.minX) <= maxLeftEdgeOffset * lineHeight
+        let fitsParagraphWidth = line.frame.maxX <= previous.maxX + maxRightOverhang * lineHeight
 
         return isPreviousLineWrapped && hasSimilarHeight && isDirectlyBelow && isLeftAligned
             && fitsParagraphWidth
-    }
-}
-
-/// A paragraph under construction: the merged block plus its last line,
-/// which decides whether the next line belongs to it.
-private struct Paragraph {
-    var block: RecognizedTextBlock
-    var lastLine: RecognizedTextBlock
-
-    mutating func append(_ line: RecognizedTextBlock) {
-        block.text += " " + line.text
-        block.frame = block.frame.union(line.frame)
-        lastLine = line
     }
 }

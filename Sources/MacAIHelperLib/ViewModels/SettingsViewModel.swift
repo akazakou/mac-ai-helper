@@ -80,8 +80,11 @@ final class SettingsViewModel {
     // MARK: - API Key Management
 
     /// Adds a new API key for a provider, saving it to the key store.
-    func addAPIKey(provider: AIProvider, key: String, label: String = "") throws {
-        let entry = APIKeyEntry(provider: provider, label: label)
+    /// A Google Translate key with a project ID is checked against the Translation LLM first.
+    func addAPIKey(_ entry: APIKeyEntry, key: String) async throws {
+        if entry.provider == .googleTranslate {
+            try await GoogleTranslateService(projectId: entry.projectId).verifyTranslationLLM(apiKey: key)
+        }
         try APIKeyStore().saveKey(key, for: entry.id)
         appState.settings.apiKeyEntries.append(entry)
         appState.saveSettings()
