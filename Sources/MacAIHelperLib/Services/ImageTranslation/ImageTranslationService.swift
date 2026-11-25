@@ -6,25 +6,18 @@ import CoreGraphics
 import Foundation
 import ImageIO
 
-enum ImageTranslationService {
-    /// Returns PNG data of the image with its text translated into `language`
-    /// (a model of a translation provider).
-    static func translate(
-        _ imageData: Data, into language: AIModel, apiKey: String
-    ) async throws -> Data {
-        guard
-            let translator = AIServiceRouter.service(for: language.provider)
-                as? TranslationServiceProtocol
-        else {
-            throw AppError.imageNotSupported(language.provider)
-        }
+struct ImageTranslationService {
+    let translator: TranslationServiceProtocol
+    let apiKey: String
 
-        let image = try decodedImage(from: imageData)
+    /// Returns PNG data of the image with its text translated into the language `languageCode`.
+    func translate(_ imageData: Data, into languageCode: String) async throws -> Data {
+        let image = try Self.decodedImage(from: imageData)
         let blocks = try ImageTextRecognizer.recognizeTextBlocks(in: image)
         guard !blocks.isEmpty else { throw AppError.noTextInImage }
 
         let translations = try await translator.translate(
-            blocks.map(\.text), into: language.id, apiKey: apiKey
+            blocks.map(\.text), into: languageCode, apiKey: apiKey
         )
         return try TranslatedImageRenderer.render(image, replacing: blocks, with: translations)
     }

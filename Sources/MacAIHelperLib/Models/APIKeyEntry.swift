@@ -10,6 +10,9 @@ public struct APIKeyEntry: Identifiable, Codable, Hashable, Sendable {
     public let provider: AIProvider
     /// User-friendly label for display
     public var label: String
+    /// Google Cloud project of a Google Translate key. When set, translations use Google's
+    /// Translation LLM, which is more accurate than the standard model.
+    public var projectId: String?
 
     public init(id: UUID = UUID(), provider: AIProvider, label: String = "") {
         self.id = id

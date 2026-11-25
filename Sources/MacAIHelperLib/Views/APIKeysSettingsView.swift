@@ -38,9 +38,13 @@ struct APIKeysSettingsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(entry.label)
                                     .font(.body)
-                                Text(entry.provider.rawValue)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                Text(
+                                    entry.projectId == nil
+                                        ? entry.provider.rawValue
+                                        : "\(entry.provider.rawValue) · Translation LLM"
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             }
 
                             Spacer()
