@@ -80,7 +80,7 @@ struct ModelPickerView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(filteredModels) { model in
+                        ForEach(filteredModels, id: \.uniqueID) { model in
                             ModelRow(
                                 model: model,
                                 isSelected: isSelected(model)

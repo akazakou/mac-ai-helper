@@ -11,6 +11,12 @@ public struct AIModel: Identifiable, Codable, Hashable, Sendable {
     /// The provider this model belongs to
     public let provider: AIProvider
 
+    /// Unique across providers. `id` alone is not: both Google Translate providers use
+    /// language codes ("ru"), and different providers can offer a model with the same id.
+    public var uniqueID: String {
+        "\(provider.rawValue)/\(id)"
+    }
+
     public init(id: String, name: String, provider: AIProvider) {
         self.id = id
         self.name = name
